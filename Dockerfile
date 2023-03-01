@@ -16,7 +16,7 @@ ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
     go build -ldflags="-s -w" -o party-manager ./cmd
 
-FROM --platform=$BUILDPLATFORM alpine:3.14 AS app
+FROM --platform=$BUILDPLATFORM alpine:3.17 AS app
 
 WORKDIR /app
 
