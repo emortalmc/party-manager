@@ -26,9 +26,26 @@ jobs:
           version: latest
           args: --timeout 2m0s
 
+  test:
+    strategy:
+      fail-fast: false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Go (cached)
+        uses: actions/setup-go@v3
+        with:
+          cache: true
+          go-version-file: go.mod
+
+      - name: test
+        run: make test
+
   build:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [ lint ]
+    needs: [ lint, test ]
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.build.outputs.image }}
