@@ -14,12 +14,12 @@ ARG TARGETOS
 ARG TARGETARCH
 
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
-    go build -ldflags="-s -w" -o relationship-manager-service ./cmd
+    go build -ldflags="-s -w" -o party-manager ./cmd
 
 FROM --platform=$BUILDPLATFORM alpine:3.14 AS app
 
 WORKDIR /app
 
-COPY --from=build /app/relationship-manager-service ./relationship-manager-service
+COPY --from=build /app/party-manager ./party-manager
 COPY run/config.yaml ./config.yaml
-CMD ["./relationship-manager-service"]
+CMD ["./party-manager"]
