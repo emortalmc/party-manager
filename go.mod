@@ -3,7 +3,7 @@ module party-manager
 go 1.20
 
 require (
-	github.com/emortalmc/proto-specs v0.0.0-20230228192304-534e9e3e8e0f
+	github.com/emortalmc/proto-specs v0.0.0-20230301120655-d1ce11b2e963
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
