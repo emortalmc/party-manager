@@ -45,7 +45,7 @@ func invalidFieldErr(field string) error {
 func (p *partyService) CreateParty(ctx context.Context, request *pb.CreatePartyRequest) (*pb.CreatePartyResponse, error) {
 	pId, err := uuid.Parse(request.OwnerId)
 	if err != nil {
-		return nil, invalidFieldErr("owner id")
+		return nil, invalidFieldErr("owner_id")
 	}
 
 	isInParty, err := p.repo.IsInParty(ctx, pId)
@@ -195,19 +195,23 @@ func (p *partyService) GetPartyInvites(ctx context.Context, request *pb.GetParty
 }
 
 var (
-	inviteSelfNotInPartyErr = panicIfErr(status.New(codes.NotFound, "not in a party").
-				WithDetails(&pb.InvitePlayerErrorResponse{ErrorType: pb.InvitePlayerErrorResponse_SELF_NOT_IN_PARTY})).
-				Err()
+	inviteMustBeLeaderErr = status.New(codes.PermissionDenied, "player must be leader").Err()
+
+	inviteAlreadyInvitedErr = panicIfErr(status.New(codes.AlreadyExists, "player is already invited").
+				WithDetails(&pb.InvitePlayerErrorResponse{ErrorType: pb.InvitePlayerErrorResponse_TARGET_ALREADY_INVITED})).Err()
+
+	errInvitePartyIsOpen = panicIfErr(status.New(codes.FailedPrecondition, "party is open").
+				WithDetails(&pb.InvitePlayerErrorResponse{ErrorType: pb.InvitePlayerErrorResponse_PARTY_IS_OPEN})).Err()
 
 	inviteTargetInSelfPartyErr = panicIfErr(status.New(codes.AlreadyExists, "target is already in the party").
-					WithDetails(&pb.InvitePlayerErrorResponse{ErrorType: pb.InvitePlayerErrorResponse_TARGET_ALREADY_IN_SELF_PARTY})).
-					Err()
+					WithDetails(&pb.InvitePlayerErrorResponse{ErrorType: pb.InvitePlayerErrorResponse_TARGET_ALREADY_IN_SELF_PARTY})).Err()
 
 	inviteTargetInOtherPartyErr = panicIfErr(status.New(codes.AlreadyExists, "target is already in another party").
-					WithDetails(&pb.InvitePlayerErrorResponse{ErrorType: pb.InvitePlayerErrorResponse_TARGET_ALREADY_IN_ANOTHER_PARTY})).
-					Err()
+					WithDetails(&pb.InvitePlayerErrorResponse{ErrorType: pb.InvitePlayerErrorResponse_TARGET_ALREADY_IN_ANOTHER_PARTY})).Err()
 )
 
+// InvitePlayer invites a player to the party of the inviter
+// If the inviter is not in a party, one is implicitly created
 func (p *partyService) InvitePlayer(ctx context.Context, request *pb.InvitePlayerRequest) (*pb.InvitePlayerResponse, error) {
 	issuerId, err := uuid.Parse(request.IssuerId)
 	if err != nil {
@@ -222,24 +226,40 @@ func (p *partyService) InvitePlayer(ctx context.Context, request *pb.InvitePlaye
 	// Get party of the inviter
 	party, err := p.repo.GetPartyByMemberId(ctx, issuerId)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, inviteSelfNotInPartyErr
-		}
-		return nil, err
-	}
-
-	settings, err := p.repo.GetPartySettings(ctx, party.LeaderId)
-
-	// TODO if party is open, deny
-
-	if party.LeaderId != issuerId {
-		// TODO check permissions since they aren't the leader
-		if err != nil {
+		if err != mongo.ErrNoDocuments {
 			return nil, err
 		}
 
+		// implicitly create a party
+		party = &model.Party{
+			LeaderId: issuerId,
+			Members: []*model.PartyMember{
+				{
+					PlayerId: issuerId,
+					Username: request.IssuerUsername,
+				},
+			},
+		}
+		err = p.repo.CreateParty(ctx, party)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	settings, err := p.getPartySettingsOrDefault(ctx, party.LeaderId)
+	if err != nil {
+		return nil, err
+	}
+
+	if settings.Open {
+		return nil, errInvitePartyIsOpen
+	}
+
+	if party.LeaderId != issuerId {
+		// TODO check permissions since they aren't the leader
+
 		if !settings.AllowMemberInvite {
-			return nil, status.New(codes.PermissionDenied, "not allowed to invite members").Err()
+			return nil, inviteMustBeLeaderErr
 		}
 	}
 
@@ -263,12 +283,7 @@ func (p *partyService) InvitePlayer(ctx context.Context, request *pb.InvitePlaye
 		return nil, err
 	}
 	if inviteExists {
-		st := status.New(codes.AlreadyExists, "target is already invited")
-		st, err := st.WithDetails(&pb.InvitePlayerErrorResponse{ErrorType: pb.InvitePlayerErrorResponse_TARGET_ALREADY_INVITED})
-		if err != nil {
-			return nil, err
-		}
-		return nil, st.Err()
+		return nil, inviteAlreadyInvitedErr
 	}
 
 	// Create invite
@@ -297,11 +312,22 @@ func (p *partyService) InvitePlayer(ctx context.Context, request *pb.InvitePlaye
 	}, nil
 }
 
+var (
+	joinPartyAlreadyInPartyErr = panicIfErr(status.New(codes.AlreadyExists, "player is already in a party").
+					WithDetails(&pb.JoinPartyErrorResponse{ErrorType: pb.JoinPartyErrorResponse_ALREADY_IN_PARTY})).Err()
+
+	joinPartyPartyNotFoundErr = panicIfErr(status.New(codes.NotFound, "party not found").
+					WithDetails(&pb.JoinPartyErrorResponse{ErrorType: pb.JoinPartyErrorResponse_PARTY_NOT_FOUND})).Err()
+
+	joinPartyNotInvitedErr = panicIfErr(status.New(codes.PermissionDenied, "player is not invited to the party").
+				WithDetails(&pb.JoinPartyErrorResponse{ErrorType: pb.JoinPartyErrorResponse_NOT_INVITED})).Err()
+)
+
 // TODO the database calls here are a bit messy. Can we clean them up?
 func (p *partyService) JoinParty(ctx context.Context, request *pb.JoinPartyRequest) (*pb.JoinPartyResponse, error) {
 	playerId, err := uuid.Parse(request.PlayerId)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid player id: %s", request.PlayerId))
+		return nil, invalidFieldErr("player_id")
 	}
 
 	// Check if the player is already in a party
@@ -311,12 +337,7 @@ func (p *partyService) JoinParty(ctx context.Context, request *pb.JoinPartyReque
 	}
 
 	if isInParty {
-		st := status.New(codes.AlreadyExists, "player is already in a party")
-		st, err := st.WithDetails(&pb.JoinPartyErrorResponse{ErrorType: pb.JoinPartyErrorResponse_ALREADY_IN_PARTY})
-		if err != nil {
-			return nil, err
-		}
-		return nil, st.Err()
+		return nil, joinPartyAlreadyInPartyErr
 	}
 
 	// Get the target party
@@ -324,7 +345,7 @@ func (p *partyService) JoinParty(ctx context.Context, request *pb.JoinPartyReque
 	if request.GetPartyId() != "" {
 		targetPartyId, err := primitive.ObjectIDFromHex(request.GetPartyId())
 		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid party id: %s", request.GetPartyId()))
+			return nil, invalidFieldErr("party_id")
 		}
 
 		party, err = p.repo.GetPartyById(ctx, targetPartyId)
@@ -334,18 +355,13 @@ func (p *partyService) JoinParty(ctx context.Context, request *pb.JoinPartyReque
 	} else if request.GetMemberId() != "" {
 		targetMemberId, err := uuid.Parse(request.GetMemberId())
 		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid player id: %s", request.GetMemberId()))
+			return nil, invalidFieldErr("member_id")
 		}
 
 		party, err = p.repo.GetPartyByMemberId(ctx, targetMemberId)
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
-				st := status.New(codes.NotFound, "target player is not in a party")
-				st, err := st.WithDetails(&pb.JoinPartyErrorResponse{ErrorType: pb.JoinPartyErrorResponse_PARTY_NOT_FOUND})
-				if err != nil {
-					return nil, err
-				}
-				return nil, st.Err()
+				return nil, joinPartyPartyNotFoundErr
 			}
 			return nil, err
 		}
@@ -363,12 +379,7 @@ func (p *partyService) JoinParty(ctx context.Context, request *pb.JoinPartyReque
 	if err != nil {
 		// ignore a mongo.ErrNoDocuments error if the party is open
 		if err == mongo.ErrNoDocuments && !settings.Open {
-			st := status.New(codes.NotFound, "invite not found")
-			st, err := st.WithDetails(&pb.JoinPartyErrorResponse{ErrorType: pb.JoinPartyErrorResponse_NOT_INVITED})
-			if err != nil {
-				return nil, err
-			}
-			return nil, st.Err()
+			return nil, joinPartyNotInvitedErr
 		} else if err != mongo.ErrNoDocuments {
 			return nil, err
 		}
@@ -403,7 +414,7 @@ var (
 func (p *partyService) LeaveParty(ctx context.Context, request *pb.LeavePartyRequest) (*pb.LeavePartyResponse, error) {
 	playerId, err := uuid.Parse(request.PlayerId)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid player id: %s", request.PlayerId))
+		return nil, invalidFieldErr("player_id")
 	}
 
 	leaderId, err := p.repo.GetPartyLeaderIdByMemberId(ctx, playerId)
@@ -449,12 +460,12 @@ var (
 func (p *partyService) KickPlayer(ctx context.Context, request *pb.KickPlayerRequest) (*pb.KickPlayerResponse, error) {
 	issuerId, err := uuid.Parse(request.IssuerId)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid issuer id: %s", request.IssuerId))
+		return nil, invalidFieldErr("issuer_id")
 	}
 
 	targetId, err := uuid.Parse(request.TargetId)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid target id: %s", request.TargetId))
+		return nil, invalidFieldErr("target_id")
 	}
 
 	// Get the party as we are going to do many checks
@@ -510,49 +521,46 @@ func (p *partyService) KickPlayer(ctx context.Context, request *pb.KickPlayerReq
 	return &pb.KickPlayerResponse{}, nil
 }
 
+var (
+	setLeaderSelfNotInPartyErr = panicIfErr(status.New(codes.NotFound, "issuer is not in a party").
+					WithDetails(&pb.SetPartyLeaderErrorResponse{ErrorType: pb.SetPartyLeaderErrorResponse_SELF_NOT_IN_PARTY})).Err()
+
+	setLeaderSelfNotLeaderErr = panicIfErr(status.New(codes.FailedPrecondition, "issuer is not the leader of the party").
+					WithDetails(&pb.SetPartyLeaderErrorResponse{ErrorType: pb.SetPartyLeaderErrorResponse_SELF_NOT_LEADER})).Err()
+
+	// setLeaderTargetNotInPartyErr this only means they are not in the same party, they may be in another party
+	setLeaderTargetNotInPartyErr = panicIfErr(status.New(codes.FailedPrecondition, "target is not in the party").
+					WithDetails(&pb.SetPartyLeaderErrorResponse{ErrorType: pb.SetPartyLeaderErrorResponse_TARGET_NOT_IN_PARTY})).Err()
+)
+
 func (p *partyService) SetPartyLeader(ctx context.Context, request *pb.SetPartyLeaderRequest) (*pb.SetPartyLeaderResponse, error) {
 	issuerId, err := uuid.Parse(request.IssuerId)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid issuer id: %s", request.IssuerId))
+		return nil, invalidFieldErr("issuer_id")
 	}
 
 	targetId, err := uuid.Parse(request.TargetId)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid target id: %s", request.TargetId))
+		return nil, invalidFieldErr("target_id")
 	}
 
 	// Get the party as we are going to do many checks
 	party, err := p.repo.GetPartyByMemberId(ctx, issuerId)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			st := status.New(codes.NotFound, "issuer is not in a party")
-			st, err := st.WithDetails(&pb.SetPartyLeaderErrorResponse{ErrorType: pb.SetPartyLeaderErrorResponse_SELF_NOT_IN_PARTY})
-			if err != nil {
-				return nil, err
-			}
-			return nil, st.Err()
+			return nil, setLeaderSelfNotInPartyErr
 		}
 		return nil, err
 	}
 
 	// Check if the issuer is the party leader
 	if party.LeaderId != issuerId {
-		st := status.New(codes.PermissionDenied, "issuer is not the party leader")
-		st, err := st.WithDetails(&pb.SetPartyLeaderErrorResponse{ErrorType: pb.SetPartyLeaderErrorResponse_SELF_NOT_LEADER})
-		if err != nil {
-			return nil, err
-		}
-		return nil, st.Err()
+		return nil, setLeaderSelfNotLeaderErr
 	}
 
 	// Check if the target is in the party
 	if !party.ContainsMember(targetId) {
-		st := status.New(codes.NotFound, "target is not in the party")
-		st, err := st.WithDetails(&pb.SetPartyLeaderErrorResponse{ErrorType: pb.SetPartyLeaderErrorResponse_TARGET_NOT_IN_PARTY})
-		if err != nil {
-			return nil, err
-		}
-		return nil, st.Err()
+		return nil, setLeaderTargetNotInPartyErr
 	}
 
 	// Set the new leader

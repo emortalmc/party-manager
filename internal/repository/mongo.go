@@ -16,7 +16,8 @@ import (
 )
 
 const (
-	databaseName                = "party-manager"
+	databaseName = "party-manager"
+
 	partyCollectionName         = "party"
 	partyInviteCollectionName   = "partyInvite"
 	partySettingsCollectionName = "partySettings"
@@ -31,6 +32,7 @@ var (
 
 type mongoRepository struct {
 	Repository
+
 	database *mongo.Database
 
 	partyCollection         *mongo.Collection
