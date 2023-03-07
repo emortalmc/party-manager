@@ -215,12 +215,12 @@ var (
 func (p *partyService) InvitePlayer(ctx context.Context, request *pb.InvitePlayerRequest) (*pb.InvitePlayerResponse, error) {
 	issuerId, err := uuid.Parse(request.IssuerId)
 	if err != nil {
-		return nil, invalidFieldErr("issuer id")
+		return nil, invalidFieldErr("issuer_id")
 	}
 
 	targetId, err := uuid.Parse(request.TargetId)
 	if err != nil {
-		return nil, invalidFieldErr("target id")
+		return nil, invalidFieldErr("target_id")
 	}
 
 	// Get party of the inviter
@@ -244,6 +244,8 @@ func (p *partyService) InvitePlayer(ctx context.Context, request *pb.InvitePlaye
 		if err != nil {
 			return nil, err
 		}
+
+		p.notif.PartyCreated(ctx, party)
 	}
 
 	settings, err := p.getPartySettingsOrDefault(ctx, party.LeaderId)
@@ -305,7 +307,7 @@ func (p *partyService) InvitePlayer(ctx context.Context, request *pb.InvitePlaye
 		return nil, err
 	}
 
-	// TODO notify
+	p.notif.PartyInviteCreated(ctx, invite)
 
 	return &pb.InvitePlayerResponse{
 		Invite: invite.ToProto(),
@@ -417,7 +419,7 @@ func (p *partyService) LeaveParty(ctx context.Context, request *pb.LeavePartyReq
 		return nil, invalidFieldErr("player_id")
 	}
 
-	leaderId, err := p.repo.GetPartyLeaderIdByMemberId(ctx, playerId)
+	party, err := p.repo.GetPartyByMemberId(ctx, playerId)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, leaveNotInPartyErr
@@ -425,7 +427,7 @@ func (p *partyService) LeaveParty(ctx context.Context, request *pb.LeavePartyReq
 		return nil, err
 	}
 
-	if leaderId == playerId {
+	if party.LeaderId == playerId {
 		return nil, leaveIsLeaderErr
 	}
 
@@ -438,7 +440,12 @@ func (p *partyService) LeaveParty(ctx context.Context, request *pb.LeavePartyReq
 		return nil, err
 	}
 
-	// TODO notify
+	member, ok := party.GetMember(playerId)
+	if !ok {
+		return nil, status.Error(codes.Internal, "Couldn't find player in party they should definitely be in")
+	}
+
+	p.notif.PartyPlayerLeft(ctx, party.Id, member)
 
 	return &pb.LeavePartyResponse{}, nil
 }

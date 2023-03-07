@@ -46,7 +46,7 @@ func (r *rabbitMqNotifier) PartyCreated(ctx context.Context, party *model.Party)
 
 	body, err := proto.Marshal(msg)
 	if err != nil {
-		r.logger.Errorw("failed to marshal party created message", "error", err)
+		r.logger.Errorw("failed to marshal party created message", err)
 		return
 	}
 
@@ -58,7 +58,7 @@ func (r *rabbitMqNotifier) PartyCreated(ctx context.Context, party *model.Party)
 	})
 
 	if err != nil {
-		r.logger.Errorw("failed to publish party created message", "error", err)
+		r.logger.Errorw("failed to publish party created message", err)
 		return
 	}
 }
@@ -73,7 +73,7 @@ func (r *rabbitMqNotifier) PartyDisbanded(ctx context.Context, party *model.Part
 
 	body, err := proto.Marshal(msg)
 	if err != nil {
-		r.logger.Errorw("failed to marshal party disbanded message", "error", err)
+		r.logger.Errorw("failed to marshal party disbanded message", err)
 		return
 	}
 
@@ -85,7 +85,7 @@ func (r *rabbitMqNotifier) PartyDisbanded(ctx context.Context, party *model.Part
 	})
 
 	if err != nil {
-		r.logger.Errorw("failed to publish party disbanded message", "error", err)
+		r.logger.Errorw("failed to publish party disbanded message", err)
 		return
 	}
 }
@@ -100,7 +100,7 @@ func (r *rabbitMqNotifier) PartyInviteCreated(ctx context.Context, invite *model
 
 	body, err := proto.Marshal(msg)
 	if err != nil {
-		r.logger.Errorw("failed to marshal party invite created message", "error", err)
+		r.logger.Errorw("failed to marshal party invite created message", err)
 		return
 	}
 
@@ -112,7 +112,7 @@ func (r *rabbitMqNotifier) PartyInviteCreated(ctx context.Context, invite *model
 	})
 
 	if err != nil {
-		r.logger.Errorw("failed to publish party invite created message", "error", err)
+		r.logger.Errorw("failed to publish party invite created message", err)
 		return
 	}
 }
@@ -127,7 +127,7 @@ func (r *rabbitMqNotifier) PartyPlayerJoined(ctx context.Context, partyId primit
 
 	body, err := proto.Marshal(msg)
 	if err != nil {
-		r.logger.Errorw("failed to marshal party player joined message", "error", err)
+		r.logger.Errorw("failed to marshal party player joined message", err)
 		return
 	}
 
@@ -139,7 +139,7 @@ func (r *rabbitMqNotifier) PartyPlayerJoined(ctx context.Context, partyId primit
 	})
 
 	if err != nil {
-		r.logger.Errorw("failed to publish party player joined message", "error", err)
+		r.logger.Errorw("failed to publish party player joined message", err)
 		return
 	}
 }
@@ -155,7 +155,7 @@ func (r *rabbitMqNotifier) PartyPlayerLeft(ctx context.Context, partyId primitiv
 
 	body, err := proto.Marshal(msg)
 	if err != nil {
-		r.logger.Errorw("failed to marshal party player left message", "error", err)
+		r.logger.Errorw("failed to marshal party player left message", err)
 		return
 	}
 
@@ -167,7 +167,7 @@ func (r *rabbitMqNotifier) PartyPlayerLeft(ctx context.Context, partyId primitiv
 	})
 
 	if err != nil {
-		r.logger.Errorw("failed to publish party player left message", "error", err)
+		r.logger.Errorw("failed to publish party player left message", err)
 		return
 	}
 }
@@ -176,19 +176,19 @@ func (r *rabbitMqNotifier) PartyPlayerKicked(ctx context.Context, partyId primit
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	msg := &pbmsg.PartyPlayerKickedMessage{
-		PartyId:      partyId.Hex(),
-		KickedMember: target.ToProto(),
-		KickerMember: kicker.ToProto(),
+	msg := &pbmsg.PartyPlayerLeftMessage{
+		PartyId:  partyId.Hex(),
+		Member:   target.ToProto(),
+		KickedBy: kicker.ToProto(),
 	}
 
 	body, err := proto.Marshal(msg)
 	if err != nil {
-		r.logger.Errorw("failed to marshal party player kicked message", "error", err)
+		r.logger.Errorw("failed to marshal party player kicked message", err)
 		return
 	}
 
-	err = r.channel.PublishWithContext(ctx, exchange, "party_player_kicked", false, false, amqp.Publishing{
+	err = r.channel.PublishWithContext(ctx, exchange, "party_player_left", false, false, amqp.Publishing{
 		ContentType: "application/x-protobuf",
 		Timestamp:   time.Now(),
 		Type:        string(msg.ProtoReflect().Descriptor().FullName()),
@@ -196,7 +196,7 @@ func (r *rabbitMqNotifier) PartyPlayerKicked(ctx context.Context, partyId primit
 	})
 
 	if err != nil {
-		r.logger.Errorw("failed to publish party player kicked message", "error", err)
+		r.logger.Errorw("failed to publish party player kicked message", err)
 		return
 	}
 }
@@ -212,7 +212,7 @@ func (r *rabbitMqNotifier) PartyLeaderChanged(ctx context.Context, partyId primi
 
 	body, err := proto.Marshal(msg)
 	if err != nil {
-		r.logger.Errorw("failed to marshal party leader changed message", "error", err)
+		r.logger.Errorw("failed to marshal party leader changed message", err)
 		return
 	}
 
@@ -224,7 +224,7 @@ func (r *rabbitMqNotifier) PartyLeaderChanged(ctx context.Context, partyId primi
 	})
 
 	if err != nil {
-		r.logger.Errorw("failed to publish party leader changed message", "error", err)
+		r.logger.Errorw("failed to publish party leader changed message", err)
 		return
 	}
 }
@@ -240,7 +240,7 @@ func (r *rabbitMqNotifier) PartySettingsChanged(ctx context.Context, playerId uu
 
 	body, err := proto.Marshal(msg)
 	if err != nil {
-		r.logger.Errorw("failed to marshal party settings changed message", "error", err)
+		r.logger.Errorw("failed to marshal party settings changed message", err)
 		return
 	}
 
@@ -252,7 +252,7 @@ func (r *rabbitMqNotifier) PartySettingsChanged(ctx context.Context, playerId uu
 	})
 
 	if err != nil {
-		r.logger.Errorw("failed to publish party settings changed message", "error", err)
+		r.logger.Errorw("failed to publish party settings changed message", err)
 		return
 	}
 }

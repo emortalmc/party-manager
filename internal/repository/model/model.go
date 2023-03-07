@@ -38,6 +38,18 @@ func (p *Party) ContainsMember(id uuid.UUID) bool {
 	return false
 }
 
+func (p *Party) GetMember(id uuid.UUID) (member *PartyMember, ok bool) {
+	for _, loopMember := range p.Members {
+		if loopMember.PlayerId == id {
+			member = loopMember
+			ok = true
+			return
+		}
+	}
+
+	return
+}
+
 type PartyMember struct {
 	PlayerId uuid.UUID `bson:"playerId"`
 	Username string    `bson:"username"`
