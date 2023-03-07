@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"net"
 	"party-manager/internal/config"
+	"party-manager/internal/rabbitmq/listener"
 	"party-manager/internal/rabbitmq/notifier"
 	"party-manager/internal/repository"
 	"party-manager/internal/service"
@@ -40,6 +41,12 @@ func Run(ctx context.Context, cfg *config.Config, logger *zap.SugaredLogger) {
 	notif, err := notifier.NewRabbitMqNotifier(logger, rabbitConn)
 	if err != nil {
 		logger.Fatalw("failed to create rabbitmq notifier", err)
+		return
+	}
+
+	err = listener.NewListener(logger, rabbitConn, notif, repo)
+	if err != nil {
+		logger.Fatalw("failed to create rabbitmq listener", err)
 		return
 	}
 
