@@ -145,7 +145,7 @@ func TestPartyService_DisbandParty(t *testing.T) {
 			},
 
 			getPartyByMemberIdReq: memberId,
-			getPartyByMemberIdRes: &model.Party{Id: partyId},
+			getPartyByMemberIdRes: &model.Party{Id: partyId, LeaderId: memberId},
 
 			deletePartyReq: partyId,
 		},
@@ -158,7 +158,7 @@ func TestPartyService_DisbandParty(t *testing.T) {
 			getPartyByIdReq: partyId,
 			getPartyByIdErr: mongo.ErrNoDocuments,
 
-			wantErr: partyNotFoundErr,
+			wantErr: disbandNotInPartyErr,
 		},
 		{
 			name: "party_not_found_by_member_id",
@@ -169,7 +169,7 @@ func TestPartyService_DisbandParty(t *testing.T) {
 			getPartyByMemberIdReq: memberId,
 			getPartyByMemberIdErr: mongo.ErrNoDocuments,
 
-			wantErr: partyNotFoundErr,
+			wantErr: disbandNotInPartyErr,
 		},
 	}
 
