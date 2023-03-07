@@ -71,7 +71,7 @@ func (l *listener) handle(msg amqp.Delivery) (ok bool) {
 		l.handlePlayerDisconnect(msg)
 		return true
 	default:
-		l.logger.Warnw("received unknown message type", "type", msg.Type)
+		l.logger.Warnw("received unknown message type", "routingKey", msg.RoutingKey, "type", msg.Type)
 		return false
 	}
 }
