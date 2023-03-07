@@ -12,6 +12,8 @@ import (
 	"party-manager/internal/repository"
 )
 
+const queueName = "party-manager"
+
 type listener struct {
 	logger *zap.SugaredLogger
 	ctx    context.Context
@@ -41,11 +43,13 @@ func NewListener(logger *zap.SugaredLogger, rabbitMqConn *amqp.Connection, notif
 }
 
 func (l *listener) listen() {
-	msgs, err := l.channel.Consume("party-manager", "", false, false, false, false, nil)
+	msgs, err := l.channel.Consume(queueName, "", false, false, false, false, nil)
 	if err != nil {
 		l.logger.Errorw("failed to consume messages", err)
 		return
 	}
+
+	l.logger.Infow("listening for messages from rabbitmq", "queue", queueName)
 
 	for msg := range msgs {
 		ok := l.handle(msg)
