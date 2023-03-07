@@ -35,7 +35,7 @@ var (
 	playerNotInPartyErr = status.New(codes.NotFound, "player not in party").Err()
 
 	createAlreadyInPartyErr = panicIfErr(status.New(codes.AlreadyExists, "player is already in a party").
-		WithDetails(&pb.CreatePartyErrorResponse{ErrorType: pb.CreatePartyErrorResponse_ALREADY_IN_PARTY})).Err()
+				WithDetails(&pb.CreatePartyErrorResponse{ErrorType: pb.CreatePartyErrorResponse_ALREADY_IN_PARTY})).Err()
 )
 
 func invalidFieldErr(field string) error {
@@ -77,10 +77,10 @@ func (p *partyService) CreateParty(ctx context.Context, request *pb.CreatePartyR
 
 var (
 	disbandNotLeaderErr = panicIfErr(status.New(codes.PermissionDenied, "player is not the party leader").
-		WithDetails(&pb.DisbandPartyErrorResponse{ErrorType: pb.DisbandPartyErrorResponse_NOT_LEADER})).Err()
+				WithDetails(&pb.DisbandPartyErrorResponse{ErrorType: pb.DisbandPartyErrorResponse_NOT_LEADER})).Err()
 
 	disbandNotInPartyErr = panicIfErr(status.New(codes.NotFound, "player is not in a party").
-		WithDetails(&pb.DisbandPartyErrorResponse{ErrorType: pb.DisbandPartyErrorResponse_NOT_IN_PARTY})).Err()
+				WithDetails(&pb.DisbandPartyErrorResponse{ErrorType: pb.DisbandPartyErrorResponse_NOT_IN_PARTY})).Err()
 )
 
 func (p *partyService) DisbandParty(ctx context.Context, request *pb.DisbandPartyRequest) (resp *pb.DisbandPartyResponse, err error) {
@@ -127,6 +127,11 @@ func (p *partyService) DisbandParty(ctx context.Context, request *pb.DisbandPart
 		if err == mongo.ErrNoDocuments {
 			return nil, disbandNotInPartyErr
 		}
+		return nil, err
+	}
+
+	err = p.repo.DeletePartyInvitesByPartyId(ctx, party.Id)
+	if err != nil {
 		return nil, err
 	}
 
@@ -217,16 +222,16 @@ var (
 	inviteMustBeLeaderErr = status.New(codes.PermissionDenied, "player must be leader").Err()
 
 	inviteAlreadyInvitedErr = panicIfErr(status.New(codes.AlreadyExists, "player is already invited").
-		WithDetails(&pb.InvitePlayerErrorResponse{ErrorType: pb.InvitePlayerErrorResponse_TARGET_ALREADY_INVITED})).Err()
+				WithDetails(&pb.InvitePlayerErrorResponse{ErrorType: pb.InvitePlayerErrorResponse_TARGET_ALREADY_INVITED})).Err()
 
 	errInvitePartyIsOpen = panicIfErr(status.New(codes.FailedPrecondition, "party is open").
-		WithDetails(&pb.InvitePlayerErrorResponse{ErrorType: pb.InvitePlayerErrorResponse_PARTY_IS_OPEN})).Err()
+				WithDetails(&pb.InvitePlayerErrorResponse{ErrorType: pb.InvitePlayerErrorResponse_PARTY_IS_OPEN})).Err()
 
 	inviteTargetInSelfPartyErr = panicIfErr(status.New(codes.AlreadyExists, "target is already in the party").
-		WithDetails(&pb.InvitePlayerErrorResponse{ErrorType: pb.InvitePlayerErrorResponse_TARGET_ALREADY_IN_SELF_PARTY})).Err()
+					WithDetails(&pb.InvitePlayerErrorResponse{ErrorType: pb.InvitePlayerErrorResponse_TARGET_ALREADY_IN_SELF_PARTY})).Err()
 
 	inviteTargetInOtherPartyErr = panicIfErr(status.New(codes.AlreadyExists, "target is already in another party").
-		WithDetails(&pb.InvitePlayerErrorResponse{ErrorType: pb.InvitePlayerErrorResponse_TARGET_ALREADY_IN_ANOTHER_PARTY})).Err()
+					WithDetails(&pb.InvitePlayerErrorResponse{ErrorType: pb.InvitePlayerErrorResponse_TARGET_ALREADY_IN_ANOTHER_PARTY})).Err()
 )
 
 // InvitePlayer invites a player to the party of the inviter
@@ -335,13 +340,13 @@ func (p *partyService) InvitePlayer(ctx context.Context, request *pb.InvitePlaye
 
 var (
 	joinPartyAlreadyInPartyErr = panicIfErr(status.New(codes.AlreadyExists, "player is already in a party").
-		WithDetails(&pb.JoinPartyErrorResponse{ErrorType: pb.JoinPartyErrorResponse_ALREADY_IN_PARTY})).Err()
+					WithDetails(&pb.JoinPartyErrorResponse{ErrorType: pb.JoinPartyErrorResponse_ALREADY_IN_PARTY})).Err()
 
 	joinPartyPartyNotFoundErr = panicIfErr(status.New(codes.NotFound, "party not found").
-		WithDetails(&pb.JoinPartyErrorResponse{ErrorType: pb.JoinPartyErrorResponse_PARTY_NOT_FOUND})).Err()
+					WithDetails(&pb.JoinPartyErrorResponse{ErrorType: pb.JoinPartyErrorResponse_PARTY_NOT_FOUND})).Err()
 
 	joinPartyNotInvitedErr = panicIfErr(status.New(codes.PermissionDenied, "player is not invited to the party").
-		WithDetails(&pb.JoinPartyErrorResponse{ErrorType: pb.JoinPartyErrorResponse_NOT_INVITED})).Err()
+				WithDetails(&pb.JoinPartyErrorResponse{ErrorType: pb.JoinPartyErrorResponse_NOT_INVITED})).Err()
 )
 
 // TODO the database calls here are a bit messy. Can we clean them up?
@@ -426,10 +431,10 @@ func (p *partyService) JoinParty(ctx context.Context, request *pb.JoinPartyReque
 
 var (
 	leaveNotInPartyErr = panicIfErr(status.New(codes.NotFound, "player is not in a party").
-		WithDetails(&pb.LeavePartyErrorResponse{ErrorType: pb.LeavePartyErrorResponse_NOT_IN_PARTY})).Err()
+				WithDetails(&pb.LeavePartyErrorResponse{ErrorType: pb.LeavePartyErrorResponse_NOT_IN_PARTY})).Err()
 
 	leaveIsLeaderErr = panicIfErr(status.New(codes.FailedPrecondition, "player is the leader of the party").
-		WithDetails(&pb.LeavePartyErrorResponse{ErrorType: pb.LeavePartyErrorResponse_CANNOT_LEAVE_AS_LEADER})).Err()
+				WithDetails(&pb.LeavePartyErrorResponse{ErrorType: pb.LeavePartyErrorResponse_CANNOT_LEAVE_AS_LEADER})).Err()
 )
 
 func (p *partyService) LeaveParty(ctx context.Context, request *pb.LeavePartyRequest) (*pb.LeavePartyResponse, error) {
@@ -471,16 +476,16 @@ func (p *partyService) LeaveParty(ctx context.Context, request *pb.LeavePartyReq
 
 var (
 	kickNotInPartyErr = panicIfErr(status.New(codes.NotFound, "issuer is not in a party").
-		WithDetails(&pb.KickPlayerErrorResponse{ErrorType: pb.KickPlayerErrorResponse_SELF_NOT_IN_PARTY})).Err()
+				WithDetails(&pb.KickPlayerErrorResponse{ErrorType: pb.KickPlayerErrorResponse_SELF_NOT_IN_PARTY})).Err()
 
 	kickNotLeaderErr = panicIfErr(status.New(codes.FailedPrecondition, "issuer is not the leader of the party").
-		WithDetails(&pb.KickPlayerErrorResponse{ErrorType: pb.KickPlayerErrorResponse_SELF_NOT_LEADER})).Err()
+				WithDetails(&pb.KickPlayerErrorResponse{ErrorType: pb.KickPlayerErrorResponse_SELF_NOT_LEADER})).Err()
 
 	kickTargetIsLeaderErr = panicIfErr(status.New(codes.FailedPrecondition, "target is the leader of the party").
-		WithDetails(&pb.KickPlayerErrorResponse{ErrorType: pb.KickPlayerErrorResponse_TARGET_IS_LEADER})).Err()
+				WithDetails(&pb.KickPlayerErrorResponse{ErrorType: pb.KickPlayerErrorResponse_TARGET_IS_LEADER})).Err()
 
 	kickTargetNotInPartyErr = panicIfErr(status.New(codes.FailedPrecondition, "target is not in the party").
-		WithDetails(&pb.KickPlayerErrorResponse{ErrorType: pb.KickPlayerErrorResponse_TARGET_NOT_IN_PARTY})).Err()
+				WithDetails(&pb.KickPlayerErrorResponse{ErrorType: pb.KickPlayerErrorResponse_TARGET_NOT_IN_PARTY})).Err()
 )
 
 func (p *partyService) KickPlayer(ctx context.Context, request *pb.KickPlayerRequest) (*pb.KickPlayerResponse, error) {
@@ -549,14 +554,14 @@ func (p *partyService) KickPlayer(ctx context.Context, request *pb.KickPlayerReq
 
 var (
 	setLeaderSelfNotInPartyErr = panicIfErr(status.New(codes.NotFound, "issuer is not in a party").
-		WithDetails(&pb.SetPartyLeaderErrorResponse{ErrorType: pb.SetPartyLeaderErrorResponse_SELF_NOT_IN_PARTY})).Err()
+					WithDetails(&pb.SetPartyLeaderErrorResponse{ErrorType: pb.SetPartyLeaderErrorResponse_SELF_NOT_IN_PARTY})).Err()
 
 	setLeaderSelfNotLeaderErr = panicIfErr(status.New(codes.FailedPrecondition, "issuer is not the leader of the party").
-		WithDetails(&pb.SetPartyLeaderErrorResponse{ErrorType: pb.SetPartyLeaderErrorResponse_SELF_NOT_LEADER})).Err()
+					WithDetails(&pb.SetPartyLeaderErrorResponse{ErrorType: pb.SetPartyLeaderErrorResponse_SELF_NOT_LEADER})).Err()
 
 	// setLeaderTargetNotInPartyErr this only means they are not in the same party, they may be in another party
 	setLeaderTargetNotInPartyErr = panicIfErr(status.New(codes.FailedPrecondition, "target is not in the party").
-		WithDetails(&pb.SetPartyLeaderErrorResponse{ErrorType: pb.SetPartyLeaderErrorResponse_TARGET_NOT_IN_PARTY})).Err()
+					WithDetails(&pb.SetPartyLeaderErrorResponse{ErrorType: pb.SetPartyLeaderErrorResponse_TARGET_NOT_IN_PARTY})).Err()
 )
 
 func (p *partyService) SetPartyLeader(ctx context.Context, request *pb.SetPartyLeaderRequest) (*pb.SetPartyLeaderResponse, error) {

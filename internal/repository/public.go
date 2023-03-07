@@ -36,6 +36,7 @@ type Repository interface {
 	// CreatePartyInvite creates a new invite and sets the ID of the invite for the reference.
 	CreatePartyInvite(ctx context.Context, invite *model.PartyInvite) error
 	DeletePartyInvite(ctx context.Context, partyId primitive.ObjectID, targetId uuid.UUID) error
+	DeletePartyInvitesByPartyId(ctx context.Context, partyId primitive.ObjectID) error
 	// GetPartyInvitesByPartyId returns all party invites for a given party.
 	// Note that this does not check if the party exists. If the party does not exist, an empty slice is returned.
 	GetPartyInvitesByPartyId(ctx context.Context, partyId primitive.ObjectID) ([]*model.PartyInvite, error)

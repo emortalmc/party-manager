@@ -267,6 +267,14 @@ func (m *mongoRepository) DeletePartyInvite(ctx context.Context, partyId primiti
 	return nil
 }
 
+func (m *mongoRepository) DeletePartyInvitesByPartyId(ctx context.Context, partyId primitive.ObjectID) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	_, err := m.partyInviteCollection.DeleteMany(ctx, bson.M{"partyId": partyId})
+	return err
+}
+
 func (m *mongoRepository) GetPartyInvitesByPartyId(ctx context.Context, partyId primitive.ObjectID) ([]*model.PartyInvite, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()

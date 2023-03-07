@@ -106,6 +106,12 @@ func (l *listener) handlePlayerDisconnect(delivery amqp.Delivery) {
 			return
 		}
 
+		err = l.repo.DeletePartyInvitesByPartyId(l.ctx, party.Id)
+		if err != nil {
+			l.logger.Errorw("failed to delete party invites", err)
+			return
+		}
+
 		l.notif.PartyDisbanded(l.ctx, party)
 		return
 	}
