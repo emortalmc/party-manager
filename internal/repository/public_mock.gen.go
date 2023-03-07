@@ -108,6 +108,20 @@ func (mr *MockRepositoryMockRecorder) DeletePartyInvite(ctx, partyId, targetId i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePartyInvite", reflect.TypeOf((*MockRepository)(nil).DeletePartyInvite), ctx, partyId, targetId)
 }
 
+// DeletePartyInvitesByPartyId mocks base method.
+func (m *MockRepository) DeletePartyInvitesByPartyId(ctx context.Context, partyId primitive.ObjectID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeletePartyInvitesByPartyId", ctx, partyId)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeletePartyInvitesByPartyId indicates an expected call of DeletePartyInvitesByPartyId.
+func (mr *MockRepositoryMockRecorder) DeletePartyInvitesByPartyId(ctx, partyId interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePartyInvitesByPartyId", reflect.TypeOf((*MockRepository)(nil).DeletePartyInvitesByPartyId), ctx, partyId)
+}
+
 // DoesPartyInviteExist mocks base method.
 func (m *MockRepository) DoesPartyInviteExist(ctx context.Context, partyId primitive.ObjectID, playerId uuid.UUID) (bool, error) {
 	m.ctrl.T.Helper()
