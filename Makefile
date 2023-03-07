@@ -7,7 +7,7 @@ lint:
 	golangci-lint run
 
 test:
-	go test -cover ./...
+	go test -cover ./... -count=1
 
 pre-commit:
 	go mod tidy

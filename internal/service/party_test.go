@@ -125,6 +125,9 @@ func TestPartyService_DisbandParty(t *testing.T) {
 		deletePartyReq primitive.ObjectID
 		deletePartyErr error
 
+		deletePartyInvitesByPartyIdReq bool
+		deletePartyInvitesByPartyIdErr error
+
 		wantErr error
 	}{
 		{
@@ -137,6 +140,8 @@ func TestPartyService_DisbandParty(t *testing.T) {
 			getPartyByIdRes: &model.Party{Id: partyId},
 
 			deletePartyReq: partyId,
+
+			deletePartyInvitesByPartyIdReq: true,
 		},
 		{
 			name: "success_by_member_id",
@@ -148,6 +153,8 @@ func TestPartyService_DisbandParty(t *testing.T) {
 			getPartyByMemberIdRes: &model.Party{Id: partyId, LeaderId: memberId},
 
 			deletePartyReq: partyId,
+
+			deletePartyInvitesByPartyIdReq: true,
 		},
 		{
 			name: "party_not_found_by_party_id",
@@ -191,6 +198,9 @@ func TestPartyService_DisbandParty(t *testing.T) {
 			}
 			if tt.deletePartyReq != primitive.NilObjectID {
 				repo.EXPECT().DeleteParty(ctx, tt.deletePartyReq).Return(tt.deletePartyErr)
+			}
+			if tt.deletePartyInvitesByPartyIdReq {
+				repo.EXPECT().DeletePartyInvitesByPartyId(ctx, tt.deletePartyReq).Return(tt.deletePartyInvitesByPartyIdErr)
 			}
 
 			notif := notifier.NewMockNotifier(mockCntrl)
