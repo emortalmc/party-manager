@@ -17,6 +17,17 @@ type Party struct {
 	Open bool `bson:"open"`
 }
 
+func NewParty(leaderId uuid.UUID, leaderUsername string) *Party {
+	return &Party{
+		Id: primitive.NewObjectID(),
+
+		LeaderId: leaderId,
+		Members:  []*PartyMember{{PlayerId: leaderId, Username: leaderUsername}},
+
+		Open: false,
+	}
+}
+
 func (p *Party) ToProto() *pb.Party {
 	memberProtos := make([]*pb.PartyMember, len(p.Members))
 	for i, member := range p.Members {

@@ -5,7 +5,6 @@ import (
 	"github.com/emortalmc/proto-specs/gen/go/message/common"
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 	"party-manager/internal/rabbitmq/notifier"
@@ -98,12 +97,7 @@ func (l *listener) handlePlayerConnect(delivery amqp.Delivery) {
 	}
 
 	// create a party for the player
-	party := &model.Party{
-		Id:       primitive.NewObjectID(),
-		LeaderId: playerId,
-		Members:  []*model.PartyMember{{PlayerId: playerId, Username: msg.PlayerUsername}},
-		Open:     false,
-	}
+	party := model.NewParty(playerId, msg.PlayerUsername)
 
 	err = l.repo.CreateParty(l.ctx, party)
 	if err != nil {
