@@ -14,7 +14,7 @@ type Notifier interface {
 	PartyCreated(ctx context.Context, party *model.Party)
 	PartyDeleted(ctx context.Context, party *model.Party)
 	PartyEmptied(ctx context.Context, party *model.Party)
-	PartyOpenChanged(ctx context.Context, party *model.Party, open bool)
+	PartyOpenChanged(ctx context.Context, partyId primitive.ObjectID, open bool)
 	PartyInviteCreated(ctx context.Context, invite *model.PartyInvite)
 	PartyPlayerJoined(ctx context.Context, partyId primitive.ObjectID, player *model.PartyMember)
 	PartyPlayerLeft(ctx context.Context, partyId primitive.ObjectID, player *model.PartyMember)

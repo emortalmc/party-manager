@@ -112,7 +112,7 @@ var (
 func (p *partyService) SetOpenParty(ctx context.Context, request *pb.SetOpenPartyRequest) (*pb.SetOpenPartyResponse, error) {
 	playerId, err := uuid.Parse(request.GetPlayerId())
 	if err != nil {
-		return nil, invalidFieldErr("player id")
+		return nil, invalidFieldErr("player_id")
 	}
 
 	party, err := p.repo.GetPartyByMemberId(ctx, playerId)
@@ -129,7 +129,7 @@ func (p *partyService) SetOpenParty(ctx context.Context, request *pb.SetOpenPart
 		return nil, err
 	}
 
-	p.notif.PartyOpenChanged(ctx, party, request.GetOpen())
+	p.notif.PartyOpenChanged(ctx, party.Id, request.GetOpen())
 
 	return &pb.SetOpenPartyResponse{}, nil
 }
@@ -362,6 +362,14 @@ func (p *partyService) JoinParty(ctx context.Context, request *pb.JoinPartyReque
 			return nil, err
 		}
 	}
+
+	// Delete the user's current party
+	err = p.repo.DeleteParty(ctx, playerParty.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	p.notif.PartyDeleted(ctx, playerParty)
 
 	newPartyMember := &model.PartyMember{
 		PlayerId: playerId,

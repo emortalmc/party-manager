@@ -117,6 +117,34 @@ func (r *rabbitMqNotifier) PartyEmptied(ctx context.Context, party *model.Party)
 	}
 }
 
+func (r *rabbitMqNotifier) PartyOpenChanged(ctx context.Context, partyId primitive.ObjectID, open bool) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	msg := &pbmsg.PartyOpenChangedMessage{
+		PartyId: partyId.Hex(),
+		Open:    open,
+	}
+
+	body, err := proto.Marshal(msg)
+	if err != nil {
+		r.logger.Errorw("failed to marshal party open changed message", err)
+		return
+	}
+
+	err = r.channel.PublishWithContext(ctx, exchange, "party_open_changed", false, false, amqp.Publishing{
+		ContentType: "application/x-protobuf",
+		Timestamp:   time.Now(),
+		Type:        string(msg.ProtoReflect().Descriptor().FullName()),
+		Body:        body,
+	})
+
+	if err != nil {
+		r.logger.Errorw("failed to publish party open changed message", err)
+		return
+	}
+}
+
 func (r *rabbitMqNotifier) PartyInviteCreated(ctx context.Context, invite *model.PartyInvite) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
