@@ -5,11 +5,12 @@ import (
 	"github.com/emortalmc/proto-specs/gen/go/message/common"
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 	"party-manager/internal/rabbitmq/notifier"
 	"party-manager/internal/repository"
+	"party-manager/internal/repository/model"
 )
 
 const queueName = "party-manager"
@@ -82,7 +83,35 @@ func (l *listener) handle(msg amqp.Delivery) (ok bool) {
 // handlePlayerConnect creates a new party for a player
 // when they join the server.
 func (l *listener) handlePlayerConnect(delivery amqp.Delivery) {
+	msg := &common.PlayerConnectMessage{}
 
+	err := proto.Unmarshal(delivery.Body, msg)
+	if err != nil {
+		l.logger.Errorw("failed to unmarshal message", err)
+		return
+	}
+
+	playerId, err := uuid.Parse(msg.PlayerId)
+	if err != nil {
+		l.logger.Errorw("failed to parse player id", err)
+		return
+	}
+
+	// create a party for the player
+	party := &model.Party{
+		Id:       primitive.NewObjectID(),
+		LeaderId: playerId,
+		Members:  []*model.PartyMember{{PlayerId: playerId, Username: msg.PlayerUsername}},
+		Open:     false,
+	}
+
+	err = l.repo.CreateParty(l.ctx, party)
+	if err != nil {
+		l.logger.Errorw("failed to create party", err)
+		return
+	}
+
+	l.notif.PartyCreated(l.ctx, party)
 }
 
 func (l *listener) handlePlayerDisconnect(delivery amqp.Delivery) {
@@ -102,9 +131,7 @@ func (l *listener) handlePlayerDisconnect(delivery amqp.Delivery) {
 
 	party, err := l.repo.GetPartyByMemberId(l.ctx, playerId)
 	if err != nil {
-		if err != mongo.ErrNoDocuments {
-			l.logger.Errorw("failed to get party by member id", err)
-		}
+		l.logger.Errorw("failed to get party by member id", err)
 		return
 	}
 
