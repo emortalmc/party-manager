@@ -13,6 +13,8 @@ type Party struct {
 
 	LeaderId uuid.UUID      `bson:"leaderId"`
 	Members  []*PartyMember `bson:"members"`
+
+	Open bool `bson:"open"`
 }
 
 func (p *Party) ToProto() *pb.Party {
@@ -25,6 +27,7 @@ func (p *Party) ToProto() *pb.Party {
 		Id:       p.Id.Hex(),
 		LeaderId: p.LeaderId.String(),
 		Members:  memberProtos,
+		Open:     p.Open,
 	}
 }
 
@@ -97,7 +100,6 @@ type PartySettings struct {
 	DequeueOnDisconnect bool `bson:"dequeueOnDisconnect"`
 	AllowMemberDequeue  bool `bson:"allowMemberDequeue"`
 	AllowMemberInvite   bool `bson:"allowMemberInvite"`
-	Open                bool `bson:"openParty"`
 
 	// InDb is whether the settings originated from the database or not.
 	// If false, the default is probably returned.
@@ -111,7 +113,6 @@ func NewPartySettings(playerId uuid.UUID) *PartySettings {
 		DequeueOnDisconnect: false,
 		AllowMemberDequeue:  false,
 		AllowMemberInvite:   false,
-		Open:                false,
 	}
 }
 
@@ -120,6 +121,5 @@ func (s *PartySettings) ToProto() *pb.PartySettings {
 		DequeueOnDisconnect: s.DequeueOnDisconnect,
 		AllowMemberDequeue:  s.AllowMemberDequeue,
 		AllowMemberInvite:   s.AllowMemberInvite,
-		Open:                s.Open,
 	}
 }

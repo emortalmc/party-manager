@@ -63,21 +63,21 @@ func (r *rabbitMqNotifier) PartyCreated(ctx context.Context, party *model.Party)
 	}
 }
 
-func (r *rabbitMqNotifier) PartyDisbanded(ctx context.Context, party *model.Party) {
+func (r *rabbitMqNotifier) PartyEmptied(ctx context.Context, party *model.Party) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	msg := &pbmsg.PartyDisbandedMessage{
+	msg := &pbmsg.PartyEmptiedMessage{
 		Party: party.ToProto(),
 	}
 
 	body, err := proto.Marshal(msg)
 	if err != nil {
-		r.logger.Errorw("failed to marshal party disbanded message", err)
+		r.logger.Errorw("failed to marshal party emptied message", err)
 		return
 	}
 
-	err = r.channel.PublishWithContext(ctx, exchange, "party_disbanded", false, false, amqp.Publishing{
+	err = r.channel.PublishWithContext(ctx, exchange, "party_emptied", false, false, amqp.Publishing{
 		ContentType: "application/x-protobuf",
 		Timestamp:   time.Now(),
 		Type:        string(msg.ProtoReflect().Descriptor().FullName()),
@@ -85,7 +85,7 @@ func (r *rabbitMqNotifier) PartyDisbanded(ctx context.Context, party *model.Part
 	})
 
 	if err != nil {
-		r.logger.Errorw("failed to publish party disbanded message", err)
+		r.logger.Errorw("failed to publish party emptied message", err)
 		return
 	}
 }

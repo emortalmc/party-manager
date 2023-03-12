@@ -16,8 +16,15 @@ type Repository interface {
 	// CreateParty creates a new party and sets the ID of the party for the reference.
 	CreateParty(ctx context.Context, party *model.Party) error
 	DeleteParty(ctx context.Context, partyId primitive.ObjectID) error
+
+	SetPartyMembers(ctx context.Context, partyId primitive.ObjectID, members []*model.PartyMember) error
 	AddPartyMember(ctx context.Context, partyId primitive.ObjectID, member *model.PartyMember) error
+
 	SetPartyLeader(ctx context.Context, partyId primitive.ObjectID, leaderId uuid.UUID) error
+
+	// SetPartyOpen sets the party to open or closed.
+	// If no party exists, mongo.ErrNoDocuments is thrown.
+	SetPartyOpen(ctx context.Context, partyId primitive.ObjectID, open bool) error
 
 	GetPartyById(ctx context.Context, partyId primitive.ObjectID) (*model.Party, error)
 	GetPartyByMemberId(ctx context.Context, playerId uuid.UUID) (*model.Party, error)

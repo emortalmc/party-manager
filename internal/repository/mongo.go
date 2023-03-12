@@ -92,6 +92,14 @@ func (m *mongoRepository) CreateParty(ctx context.Context, party *model.Party) e
 	return nil
 }
 
+func (m *mongoRepository) SetPartyMembers(ctx context.Context, partyId primitive.ObjectID, members []*model.PartyMember) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	_, err := m.partyCollection.UpdateByID(ctx, partyId, bson.M{"$set": bson.M{"members": members}})
+	return err
+}
+
 func (m *mongoRepository) DeleteParty(ctx context.Context, partyId primitive.ObjectID) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -135,6 +143,22 @@ func (m *mongoRepository) SetPartyLeader(ctx context.Context, partyId primitive.
 
 	if res.ModifiedCount == 0 {
 		return ErrAlreadyLeader
+	}
+
+	return nil
+}
+
+func (m *mongoRepository) SetPartyOpen(ctx context.Context, partyId primitive.ObjectID, open bool) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	res, err := m.partyCollection.UpdateByID(ctx, partyId, bson.M{"$set": bson.M{"open": open}})
+	if err != nil {
+		return err
+	}
+
+	if res.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
 	}
 
 	return nil

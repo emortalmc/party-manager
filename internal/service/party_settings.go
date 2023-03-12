@@ -82,10 +82,6 @@ func (p partySettingsService) UpdatePartySettings(ctx context.Context, request *
 		settings.AllowMemberInvite = *request.AllowMemberInvite
 	}
 
-	if request.Open != nil {
-		settings.Open = *request.Open
-	}
-
 	err = p.repo.UpdatePartySettings(ctx, settings)
 	if err != nil {
 		return nil, status.New(codes.Internal, "error updating party settings").Err()

@@ -211,6 +211,15 @@ func TestMongoRepository_CreateParty(t *testing.T) {
 	}
 }
 
+// todo
+//func TestMongoRepository_SetPartyMembers(t *testing.T) {
+//	party := &model.Party{
+//		Id:       primitive.NewObjectID(),
+//		LeaderId: uuid.New(),
+//		Members:  []*model.PartyMember{{PlayerId: uuid.New(), Username: "test"}},
+//	}
+//}
+
 func TestMongoRepository_DeleteParty(t *testing.T) {
 	party := &model.Party{
 		Id:       primitive.NewObjectID(),

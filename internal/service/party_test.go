@@ -16,103 +16,13 @@ import (
 	"time"
 )
 
-var randomUUID = uuid.New()
-
-func TestPartyService_CreateParty(t *testing.T) {
-	test := []struct {
-		name string
-		req  *pb.CreatePartyRequest
-
-		isInPartyReq uuid.UUID
-		isInPartyRes bool
-		isInPartyErr error
-
-		createPartyInput *model.Party
-		createPartyErr   error
-
-		wantResponse bool
-		wantErr      error
-	}{
-		{
-			name: "success",
-			req: &pb.CreatePartyRequest{
-				OwnerId:       randomUUID.String(),
-				OwnerUsername: "test",
-			},
-
-			isInPartyReq: randomUUID,
-			isInPartyRes: false,
-
-			createPartyInput: &model.Party{
-				LeaderId: randomUUID,
-				Members:  []*model.PartyMember{{PlayerId: randomUUID, Username: "test"}},
-			},
-
-			wantResponse: true,
-		},
-		{
-			name: "already in party",
-			req: &pb.CreatePartyRequest{
-				OwnerId:       randomUUID.String(),
-				OwnerUsername: "test",
-			},
-
-			isInPartyReq: randomUUID,
-			isInPartyRes: true,
-
-			wantErr: createAlreadyInPartyErr,
-		},
-	}
-
-	for _, tt := range test {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
-
-			// Create mock repo
-			mockCntrl := gomock.NewController(t)
-			defer mockCntrl.Finish()
-
-			mockPartyId := primitive.NewObjectID()
-
-			repo := repository.NewMockRepository(mockCntrl)
-			repo.EXPECT().IsInParty(ctx, tt.isInPartyReq).Return(tt.isInPartyRes, tt.isInPartyErr)
-
-			if tt.createPartyInput != nil {
-				repo.EXPECT().CreateParty(ctx, tt.createPartyInput).DoAndReturn(func(_ context.Context, party *model.Party) error {
-					if tt.createPartyErr == nil {
-						party.Id = mockPartyId
-					}
-					return tt.createPartyErr
-				})
-			}
-
-			notif := notifier.NewMockNotifier(mockCntrl)
-			if tt.wantResponse {
-				party := *tt.createPartyInput
-				party.Id = mockPartyId
-				notif.EXPECT().PartyCreated(ctx, &party)
-			}
-
-			s := NewPartyService(notif, repo)
-
-			res, err := s.CreateParty(ctx, tt.req)
-			assert.Equal(t, err, tt.wantErr)
-
-			if tt.wantResponse {
-				tt.createPartyInput.Id = mockPartyId
-				assert.Equal(t, res.Party, tt.createPartyInput.ToProto())
-			}
-		})
-	}
-}
-
-func TestPartyService_DisbandParty(t *testing.T) {
+func TestPartyService_EmptyParty(t *testing.T) {
 	partyId := primitive.NewObjectID()
 	memberId := uuid.New()
 
 	test := []struct {
 		name string
-		req  *pb.DisbandPartyRequest
+		req  *pb.EmptyPartyRequest
 
 		getPartyByIdReq primitive.ObjectID
 		getPartyByIdRes *model.Party
@@ -132,12 +42,12 @@ func TestPartyService_DisbandParty(t *testing.T) {
 	}{
 		{
 			name: "success_by_party_id",
-			req: &pb.DisbandPartyRequest{
-				Id: &pb.DisbandPartyRequest_PartyId{PartyId: partyId.Hex()},
+			req: &pb.EmptyPartyRequest{
+				Id: &pb.EmptyPartyRequest_PartyId{PartyId: partyId.Hex()},
 			},
 
 			getPartyByIdReq: partyId,
-			getPartyByIdRes: &model.Party{Id: partyId},
+			getPartyByIdRes: &model.Party{Id: partyId, LeaderId: memberId, Members: []*model.PartyMember{{PlayerId: memberId, Username: "test"}}},
 
 			deletePartyReq: partyId,
 
@@ -145,38 +55,16 @@ func TestPartyService_DisbandParty(t *testing.T) {
 		},
 		{
 			name: "success_by_member_id",
-			req: &pb.DisbandPartyRequest{
-				Id: &pb.DisbandPartyRequest_PlayerId{PlayerId: memberId.String()},
+			req: &pb.EmptyPartyRequest{
+				Id: &pb.EmptyPartyRequest_PlayerId{PlayerId: memberId.String()},
 			},
 
 			getPartyByMemberIdReq: memberId,
-			getPartyByMemberIdRes: &model.Party{Id: partyId, LeaderId: memberId},
+			getPartyByMemberIdRes: &model.Party{Id: partyId, LeaderId: memberId, Members: []*model.PartyMember{{PlayerId: memberId, Username: "test"}}},
 
 			deletePartyReq: partyId,
 
 			deletePartyInvitesByPartyIdReq: true,
-		},
-		{
-			name: "party_not_found_by_party_id",
-			req: &pb.DisbandPartyRequest{
-				Id: &pb.DisbandPartyRequest_PartyId{PartyId: partyId.Hex()},
-			},
-
-			getPartyByIdReq: partyId,
-			getPartyByIdErr: mongo.ErrNoDocuments,
-
-			wantErr: disbandNotInPartyErr,
-		},
-		{
-			name: "party_not_found_by_member_id",
-			req: &pb.DisbandPartyRequest{
-				Id: &pb.DisbandPartyRequest_PlayerId{PlayerId: memberId.String()},
-			},
-
-			getPartyByMemberIdReq: memberId,
-			getPartyByMemberIdErr: mongo.ErrNoDocuments,
-
-			wantErr: disbandNotInPartyErr,
 		},
 	}
 
@@ -197,7 +85,18 @@ func TestPartyService_DisbandParty(t *testing.T) {
 				repo.EXPECT().GetPartyByMemberId(ctx, tt.getPartyByMemberIdReq).Return(tt.getPartyByMemberIdRes, tt.getPartyByMemberIdErr)
 			}
 			if tt.deletePartyReq != primitive.NilObjectID {
-				repo.EXPECT().DeleteParty(ctx, tt.deletePartyReq).Return(tt.deletePartyErr)
+				var party *model.Party
+				if tt.getPartyByIdRes != nil {
+					party = tt.getPartyByIdRes
+				} else if tt.getPartyByMemberIdRes != nil {
+					party = tt.getPartyByMemberIdRes
+				}
+
+				leader, ok := party.GetMember(party.LeaderId)
+
+				if ok {
+					repo.EXPECT().SetPartyMembers(ctx, tt.deletePartyReq, []*model.PartyMember{leader}).Return(tt.deletePartyErr)
+				}
 			}
 			if tt.deletePartyInvitesByPartyIdReq {
 				repo.EXPECT().DeletePartyInvitesByPartyId(ctx, tt.deletePartyReq).Return(tt.deletePartyInvitesByPartyIdErr)
@@ -212,12 +111,12 @@ func TestPartyService_DisbandParty(t *testing.T) {
 				} else if tt.getPartyByMemberIdRes != nil {
 					party = tt.getPartyByMemberIdRes
 				}
-				notif.EXPECT().PartyDisbanded(ctx, party)
+				notif.EXPECT().PartyEmptied(ctx, party)
 			}
 
 			s := NewPartyService(notif, repo)
 
-			res, err := s.DisbandParty(ctx, tt.req)
+			res, err := s.EmptyParty(ctx, tt.req)
 			assert.Equalf(t, tt.wantErr, err, "wantErr: %+v, got: %+v", tt.wantErr, err)
 			assert.Empty(t, res)
 		})

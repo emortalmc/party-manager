@@ -64,16 +64,16 @@ func (mr *MockNotifierMockRecorder) PartyCreated(ctx, party interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PartyCreated", reflect.TypeOf((*MockNotifier)(nil).PartyCreated), ctx, party)
 }
 
-// PartyDisbanded mocks base method.
-func (m *MockNotifier) PartyDisbanded(ctx context.Context, party *model.Party) {
+// PartyEmptied mocks base method.
+func (m *MockNotifier) PartyEmptied(ctx context.Context, party *model.Party) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "PartyDisbanded", ctx, party)
+	m.ctrl.Call(m, "PartyEmptied", ctx, party)
 }
 
-// PartyDisbanded indicates an expected call of PartyDisbanded.
-func (mr *MockNotifierMockRecorder) PartyDisbanded(ctx, party interface{}) *gomock.Call {
+// PartyEmptied indicates an expected call of PartyEmptied.
+func (mr *MockNotifierMockRecorder) PartyEmptied(ctx, party interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PartyDisbanded", reflect.TypeOf((*MockNotifier)(nil).PartyDisbanded), ctx, party)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PartyEmptied", reflect.TypeOf((*MockNotifier)(nil).PartyEmptied), ctx, party)
 }
 
 // PartyInviteCreated mocks base method.

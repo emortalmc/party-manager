@@ -70,10 +70,19 @@ func (l *listener) handle(msg amqp.Delivery) (ok bool) {
 	case string((&common.PlayerDisconnectMessage{}).ProtoReflect().Descriptor().FullName()):
 		l.handlePlayerDisconnect(msg)
 		return true
+	case string((&common.PlayerConnectMessage{}).ProtoReflect().Descriptor().FullName()):
+		l.handlePlayerConnect(msg)
+		return true
 	default:
 		l.logger.Warnw("received unknown message type", "routingKey", msg.RoutingKey, "type", msg.Type)
 		return false
 	}
+}
+
+// handlePlayerConnect creates a new party for a player
+// when they join the server.
+func (l *listener) handlePlayerConnect(delivery amqp.Delivery) {
+
 }
 
 func (l *listener) handlePlayerDisconnect(delivery amqp.Delivery) {
@@ -112,7 +121,7 @@ func (l *listener) handlePlayerDisconnect(delivery amqp.Delivery) {
 			return
 		}
 
-		l.notif.PartyDisbanded(l.ctx, party)
+		l.notif.PartyEmptied(l.ctx, party)
 		return
 	}
 

@@ -12,7 +12,7 @@ type Notifier interface {
 	HealthCheck(ctx context.Context, timeout time.Duration) error
 
 	PartyCreated(ctx context.Context, party *model.Party)
-	PartyDisbanded(ctx context.Context, party *model.Party)
+	PartyEmptied(ctx context.Context, party *model.Party)
 	PartyInviteCreated(ctx context.Context, invite *model.PartyInvite)
 	PartyPlayerJoined(ctx context.Context, partyId primitive.ObjectID, player *model.PartyMember)
 	PartyPlayerLeft(ctx context.Context, partyId primitive.ObjectID, player *model.PartyMember)

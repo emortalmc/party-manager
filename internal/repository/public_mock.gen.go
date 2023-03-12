@@ -313,6 +313,34 @@ func (mr *MockRepositoryMockRecorder) SetPartyLeader(ctx, partyId, leaderId inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetPartyLeader", reflect.TypeOf((*MockRepository)(nil).SetPartyLeader), ctx, partyId, leaderId)
 }
 
+// SetPartyMembers mocks base method.
+func (m *MockRepository) SetPartyMembers(ctx context.Context, partyId primitive.ObjectID, members []*model.PartyMember) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetPartyMembers", ctx, partyId, members)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetPartyMembers indicates an expected call of SetPartyMembers.
+func (mr *MockRepositoryMockRecorder) SetPartyMembers(ctx, partyId, members interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetPartyMembers", reflect.TypeOf((*MockRepository)(nil).SetPartyMembers), ctx, partyId, members)
+}
+
+// SetPartyOpen mocks base method.
+func (m *MockRepository) SetPartyOpen(ctx context.Context, partyId primitive.ObjectID, open bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetPartyOpen", ctx, partyId, open)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetPartyOpen indicates an expected call of SetPartyOpen.
+func (mr *MockRepositoryMockRecorder) SetPartyOpen(ctx, partyId, open interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetPartyOpen", reflect.TypeOf((*MockRepository)(nil).SetPartyOpen), ctx, partyId, open)
+}
+
 // UpdatePartySettings mocks base method.
 func (m *MockRepository) UpdatePartySettings(ctx context.Context, settings *model.PartySettings) error {
 	m.ctrl.T.Helper()

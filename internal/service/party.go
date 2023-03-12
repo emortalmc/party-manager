@@ -33,57 +33,18 @@ func NewPartyService(notifier notifier.Notifier, repo repository.Repository) pb.
 var (
 	partyNotFoundErr    = status.New(codes.NotFound, "party not found").Err()
 	playerNotInPartyErr = status.New(codes.NotFound, "player not in party").Err()
-
-	createAlreadyInPartyErr = panicIfErr(status.New(codes.AlreadyExists, "player is already in a party").
-				WithDetails(&pb.CreatePartyErrorResponse{ErrorType: pb.CreatePartyErrorResponse_ALREADY_IN_PARTY})).Err()
 )
 
 func invalidFieldErr(field string) error {
 	return status.New(codes.InvalidArgument, fmt.Sprintf("invalid %s", field)).Err()
 }
 
-func (p *partyService) CreateParty(ctx context.Context, request *pb.CreatePartyRequest) (*pb.CreatePartyResponse, error) {
-	pId, err := uuid.Parse(request.OwnerId)
-	if err != nil {
-		return nil, invalidFieldErr("owner_id")
-	}
-
-	isInParty, err := p.repo.IsInParty(ctx, pId)
-	if err != nil {
-		return nil, err
-	}
-
-	if isInParty {
-		return nil, createAlreadyInPartyErr
-	}
-
-	party := &model.Party{
-		LeaderId: pId,
-		Members:  []*model.PartyMember{{PlayerId: pId, Username: request.OwnerUsername}},
-	}
-
-	// NOTE: The ID of the party is updated after the party is created by the repository.
-	err = p.repo.CreateParty(ctx, party)
-	if err != nil {
-		return nil, err
-	}
-
-	p.notif.PartyCreated(ctx, party)
-
-	return &pb.CreatePartyResponse{
-		Party: party.ToProto(),
-	}, nil
-}
-
 var (
-	disbandNotLeaderErr = panicIfErr(status.New(codes.PermissionDenied, "player is not the party leader").
-				WithDetails(&pb.DisbandPartyErrorResponse{ErrorType: pb.DisbandPartyErrorResponse_NOT_LEADER})).Err()
-
-	disbandNotInPartyErr = panicIfErr(status.New(codes.NotFound, "player is not in a party").
-				WithDetails(&pb.DisbandPartyErrorResponse{ErrorType: pb.DisbandPartyErrorResponse_NOT_IN_PARTY})).Err()
+	emptyNotLeaderErr = panicIfErr(status.New(codes.PermissionDenied, "player is not the party leader").
+		WithDetails(&pb.EmptyPartyErrorResponse{ErrorType: pb.EmptyPartyErrorResponse_NOT_LEADER})).Err()
 )
 
-func (p *partyService) DisbandParty(ctx context.Context, request *pb.DisbandPartyRequest) (resp *pb.DisbandPartyResponse, err error) {
+func (p *partyService) EmptyParty(ctx context.Context, request *pb.EmptyPartyRequest) (resp *pb.EmptyPartyResponse, err error) {
 	playerId := uuid.Nil
 	if request.GetPlayerId() != "" {
 		playerId, err = uuid.Parse(request.GetPlayerId())
@@ -100,17 +61,11 @@ func (p *partyService) DisbandParty(ctx context.Context, request *pb.DisbandPart
 		}
 		party, err = p.repo.GetPartyById(ctx, partyId)
 		if err != nil {
-			if err == mongo.ErrNoDocuments {
-				return nil, disbandNotInPartyErr
-			}
 			return nil, err
 		}
 	} else {
 		party, err = p.repo.GetPartyByMemberId(ctx, playerId)
 		if err != nil {
-			if err == mongo.ErrNoDocuments {
-				return nil, disbandNotInPartyErr
-			}
 			return nil, err
 		}
 	}
@@ -118,15 +73,17 @@ func (p *partyService) DisbandParty(ctx context.Context, request *pb.DisbandPart
 	// Perform permission checks as request is made on behalf of a player.
 	if playerId != uuid.Nil {
 		if party.LeaderId != playerId {
-			return nil, disbandNotLeaderErr
+			return nil, emptyNotLeaderErr
 		}
 	}
 
-	err = p.repo.DeleteParty(ctx, party.Id)
+	leader, ok := party.GetMember(party.LeaderId)
+	if !ok {
+		return nil, status.New(codes.Internal, "party leader not found").Err()
+	}
+
+	err = p.repo.SetPartyMembers(ctx, party.Id, []*model.PartyMember{leader})
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, disbandNotInPartyErr
-		}
 		return nil, err
 	}
 
@@ -135,9 +92,16 @@ func (p *partyService) DisbandParty(ctx context.Context, request *pb.DisbandPart
 		return nil, err
 	}
 
-	p.notif.PartyDisbanded(ctx, party)
+	if party.Open {
+		err = p.repo.SetPartyOpen(ctx, party.Id, false)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	return &pb.DisbandPartyResponse{}, nil
+	p.notif.PartyEmptied(ctx, party)
+
+	return &pb.EmptyPartyResponse{}, nil
 }
 
 func (p *partyService) GetParty(ctx context.Context, request *pb.GetPartyRequest) (*pb.GetPartyResponse, error) {
@@ -277,7 +241,7 @@ func (p *partyService) InvitePlayer(ctx context.Context, request *pb.InvitePlaye
 		return nil, err
 	}
 
-	if settings.Open {
+	if party.Open {
 		return nil, errInvitePartyIsOpen
 	}
 
@@ -342,9 +306,6 @@ var (
 	joinPartyAlreadyInPartyErr = panicIfErr(status.New(codes.AlreadyExists, "player is already in a party").
 					WithDetails(&pb.JoinPartyErrorResponse{ErrorType: pb.JoinPartyErrorResponse_ALREADY_IN_PARTY})).Err()
 
-	joinPartyPartyNotFoundErr = panicIfErr(status.New(codes.NotFound, "party not found").
-					WithDetails(&pb.JoinPartyErrorResponse{ErrorType: pb.JoinPartyErrorResponse_PARTY_NOT_FOUND})).Err()
-
 	joinPartyNotInvitedErr = panicIfErr(status.New(codes.PermissionDenied, "player is not invited to the party").
 				WithDetails(&pb.JoinPartyErrorResponse{ErrorType: pb.JoinPartyErrorResponse_NOT_INVITED})).Err()
 )
@@ -356,55 +317,34 @@ func (p *partyService) JoinParty(ctx context.Context, request *pb.JoinPartyReque
 		return nil, invalidFieldErr("player_id")
 	}
 
+	targetPlayerId, err := uuid.Parse(request.TargetPlayerId)
+	if err != nil {
+		return nil, invalidFieldErr("target_player_id")
+	}
+
 	// Check if the player is already in a party
-	isInParty, err := p.repo.IsInParty(ctx, playerId)
+	playerParty, err := p.repo.GetPartyByMemberId(ctx, playerId)
 	if err != nil {
 		return nil, err
 	}
 
-	if isInParty {
+	// If the player is already in a party, they can't join another
+	// They are classed as being in a party if party size > 1
+	if len(playerParty.Members) > 1 {
 		return nil, joinPartyAlreadyInPartyErr
 	}
 
 	// Get the target party
-	var party *model.Party
-	if request.GetPartyId() != "" {
-		targetPartyId, err := primitive.ObjectIDFromHex(request.GetPartyId())
-		if err != nil {
-			return nil, invalidFieldErr("party_id")
-		}
-
-		party, err = p.repo.GetPartyById(ctx, targetPartyId)
-		if err != nil {
-			return nil, err
-		}
-	} else if request.GetMemberId() != "" {
-		targetMemberId, err := uuid.Parse(request.GetMemberId())
-		if err != nil {
-			return nil, invalidFieldErr("member_id")
-		}
-
-		party, err = p.repo.GetPartyByMemberId(ctx, targetMemberId)
-		if err != nil {
-			if err == mongo.ErrNoDocuments {
-				return nil, joinPartyPartyNotFoundErr
-			}
-			return nil, err
-		}
-	} else {
-		return nil, status.Error(codes.InvalidArgument, "party_id or member_id must be specified")
-	}
-
-	settings, err := p.getPartySettingsOrDefault(ctx, party.LeaderId)
+	targetParty, err := p.repo.GetPartyByMemberId(ctx, targetPlayerId)
 	if err != nil {
 		return nil, err
 	}
 
 	// Try revoke the invite if it exists, handle the error if it doesn't
-	err = p.repo.DeletePartyInvite(ctx, party.Id, playerId)
+	err = p.repo.DeletePartyInvite(ctx, targetParty.Id, playerId)
 	if err != nil {
 		// ignore a mongo.ErrNoDocuments error if the party is open
-		if err == mongo.ErrNoDocuments && !settings.Open {
+		if err == mongo.ErrNoDocuments && !targetParty.Open {
 			return nil, joinPartyNotInvitedErr
 		} else if err != mongo.ErrNoDocuments {
 			return nil, err
@@ -417,24 +357,21 @@ func (p *partyService) JoinParty(ctx context.Context, request *pb.JoinPartyReque
 	}
 
 	// Add the player to the party
-	err = p.repo.AddPartyMember(ctx, party.Id, newPartyMember)
+	err = p.repo.AddPartyMember(ctx, targetParty.Id, newPartyMember)
 	if err != nil {
 		return nil, err
 	}
 
-	p.notif.PartyPlayerJoined(ctx, party.Id, newPartyMember)
+	p.notif.PartyPlayerJoined(ctx, targetParty.Id, newPartyMember)
 
 	return &pb.JoinPartyResponse{
-		Party: party.ToProto(),
+		Party: targetParty.ToProto(),
 	}, nil
 }
 
 var (
-	leaveNotInPartyErr = panicIfErr(status.New(codes.NotFound, "player is not in a party").
-				WithDetails(&pb.LeavePartyErrorResponse{ErrorType: pb.LeavePartyErrorResponse_NOT_IN_PARTY})).Err()
-
 	leaveIsLeaderErr = panicIfErr(status.New(codes.FailedPrecondition, "player is the leader of the party").
-				WithDetails(&pb.LeavePartyErrorResponse{ErrorType: pb.LeavePartyErrorResponse_CANNOT_LEAVE_AS_LEADER})).Err()
+		WithDetails(&pb.LeavePartyErrorResponse{ErrorType: pb.LeavePartyErrorResponse_CANNOT_LEAVE_AS_LEADER})).Err()
 )
 
 func (p *partyService) LeaveParty(ctx context.Context, request *pb.LeavePartyRequest) (*pb.LeavePartyResponse, error) {
@@ -445,9 +382,6 @@ func (p *partyService) LeaveParty(ctx context.Context, request *pb.LeavePartyReq
 
 	party, err := p.repo.GetPartyByMemberId(ctx, playerId)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, leaveNotInPartyErr
-		}
 		return nil, err
 	}
 
@@ -458,9 +392,6 @@ func (p *partyService) LeaveParty(ctx context.Context, request *pb.LeavePartyReq
 	// Get the party id
 	err = p.repo.RemoveMemberFromSelfParty(ctx, playerId)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, leaveNotInPartyErr
-		}
 		return nil, err
 	}
 
@@ -475,9 +406,6 @@ func (p *partyService) LeaveParty(ctx context.Context, request *pb.LeavePartyReq
 }
 
 var (
-	kickNotInPartyErr = panicIfErr(status.New(codes.NotFound, "issuer is not in a party").
-				WithDetails(&pb.KickPlayerErrorResponse{ErrorType: pb.KickPlayerErrorResponse_SELF_NOT_IN_PARTY})).Err()
-
 	kickNotLeaderErr = panicIfErr(status.New(codes.FailedPrecondition, "issuer is not the leader of the party").
 				WithDetails(&pb.KickPlayerErrorResponse{ErrorType: pb.KickPlayerErrorResponse_SELF_NOT_LEADER})).Err()
 
@@ -502,9 +430,6 @@ func (p *partyService) KickPlayer(ctx context.Context, request *pb.KickPlayerReq
 	// Get the party as we are going to do many checks
 	party, err := p.repo.GetPartyByMemberId(ctx, issuerId)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, kickNotInPartyErr
-		}
 		return nil, err
 	}
 
@@ -553,9 +478,6 @@ func (p *partyService) KickPlayer(ctx context.Context, request *pb.KickPlayerReq
 }
 
 var (
-	setLeaderSelfNotInPartyErr = panicIfErr(status.New(codes.NotFound, "issuer is not in a party").
-					WithDetails(&pb.SetPartyLeaderErrorResponse{ErrorType: pb.SetPartyLeaderErrorResponse_SELF_NOT_IN_PARTY})).Err()
-
 	setLeaderSelfNotLeaderErr = panicIfErr(status.New(codes.FailedPrecondition, "issuer is not the leader of the party").
 					WithDetails(&pb.SetPartyLeaderErrorResponse{ErrorType: pb.SetPartyLeaderErrorResponse_SELF_NOT_LEADER})).Err()
 
@@ -578,9 +500,6 @@ func (p *partyService) SetPartyLeader(ctx context.Context, request *pb.SetPartyL
 	// Get the party as we are going to do many checks
 	party, err := p.repo.GetPartyByMemberId(ctx, issuerId)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, setLeaderSelfNotInPartyErr
-		}
 		return nil, err
 	}
 

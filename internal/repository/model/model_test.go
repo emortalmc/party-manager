@@ -156,13 +156,11 @@ func TestPartySettings_ToProto(t *testing.T) {
 				DequeueOnDisconnect: false,
 				AllowMemberDequeue:  false,
 				AllowMemberInvite:   false,
-				Open:                false,
 			},
 			want: &pbmodel.PartySettings{
 				DequeueOnDisconnect: false,
 				AllowMemberDequeue:  false,
 				AllowMemberInvite:   false,
-				Open:                false,
 			},
 		},
 	}
