@@ -19,8 +19,6 @@ type Party struct {
 
 func NewParty(leaderId uuid.UUID, leaderUsername string) *Party {
 	return &Party{
-		Id: primitive.NewObjectID(),
-
 		LeaderId: leaderId,
 		Members:  []*PartyMember{{PlayerId: leaderId, Username: leaderUsername}},
 
