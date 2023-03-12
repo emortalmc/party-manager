@@ -78,6 +78,8 @@ github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4
 github.com/docker/go-units v0.5.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
 github.com/emortalmc/proto-specs v0.0.0-20230304181255-30444cf04ad0 h1:6kZNbRaqXZgVuayHbJvZnuslWacCIkods+qYEilgADg=
 github.com/emortalmc/proto-specs v0.0.0-20230304181255-30444cf04ad0/go.mod h1:cg45UgpwJMltw/7o4hMp76PddXNRk1v/hdNtzesHZlw=
+github.com/emortalmc/proto-specs v0.0.0-20230312195121-6813dd47864a h1:wvoxZS8K2NDFAKUQZOFryb04qziHyjFhCoS5Op15z+A=
+github.com/emortalmc/proto-specs v0.0.0-20230312195121-6813dd47864a/go.mod h1:cg45UgpwJMltw/7o4hMp76PddXNRk1v/hdNtzesHZlw=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1mIlRU8Am5FuJP05cCM98=
