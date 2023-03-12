@@ -64,6 +64,18 @@ func (mr *MockNotifierMockRecorder) PartyCreated(ctx, party interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PartyCreated", reflect.TypeOf((*MockNotifier)(nil).PartyCreated), ctx, party)
 }
 
+// PartyDeleted mocks base method.
+func (m *MockNotifier) PartyDeleted(ctx context.Context, party *model.Party) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "PartyDeleted", ctx, party)
+}
+
+// PartyDeleted indicates an expected call of PartyDeleted.
+func (mr *MockNotifierMockRecorder) PartyDeleted(ctx, party interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PartyDeleted", reflect.TypeOf((*MockNotifier)(nil).PartyDeleted), ctx, party)
+}
+
 // PartyEmptied mocks base method.
 func (m *MockNotifier) PartyEmptied(ctx context.Context, party *model.Party) {
 	m.ctrl.T.Helper()

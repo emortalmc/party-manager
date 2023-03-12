@@ -63,6 +63,33 @@ func (r *rabbitMqNotifier) PartyCreated(ctx context.Context, party *model.Party)
 	}
 }
 
+func (r *rabbitMqNotifier) PartyDeleted(ctx context.Context, party *model.Party) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	msg := &pbmsg.PartyDeletedMessage{
+		Party: party.ToProto(),
+	}
+
+	body, err := proto.Marshal(msg)
+	if err != nil {
+		r.logger.Errorw("failed to marshal party deleted message", err)
+		return
+	}
+
+	err = r.channel.PublishWithContext(ctx, exchange, "party_deleted", false, false, amqp.Publishing{
+		ContentType: "application/x-protobuf",
+		Timestamp:   party.Id.Timestamp(),
+		Type:        string(msg.ProtoReflect().Descriptor().FullName()),
+		Body:        body,
+	})
+
+	if err != nil {
+		r.logger.Errorw("failed to publish party deleted message", err)
+		return
+	}
+}
+
 func (r *rabbitMqNotifier) PartyEmptied(ctx context.Context, party *model.Party) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()

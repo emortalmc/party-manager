@@ -142,7 +142,7 @@ func (l *listener) handlePlayerDisconnect(delivery amqp.Delivery) {
 			return
 		}
 
-		l.notif.PartyEmptied(l.ctx, party)
+		l.notif.PartyDeleted(l.ctx, party)
 		return
 	}
 
