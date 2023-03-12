@@ -112,6 +112,18 @@ func (mr *MockNotifierMockRecorder) PartyLeaderChanged(ctx, partyId, newLeader i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PartyLeaderChanged", reflect.TypeOf((*MockNotifier)(nil).PartyLeaderChanged), ctx, partyId, newLeader)
 }
 
+// PartyOpenChanged mocks base method.
+func (m *MockNotifier) PartyOpenChanged(ctx context.Context, party *model.Party, open bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "PartyOpenChanged", ctx, party, open)
+}
+
+// PartyOpenChanged indicates an expected call of PartyOpenChanged.
+func (mr *MockNotifierMockRecorder) PartyOpenChanged(ctx, party, open interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PartyOpenChanged", reflect.TypeOf((*MockNotifier)(nil).PartyOpenChanged), ctx, party, open)
+}
+
 // PartyPlayerJoined mocks base method.
 func (m *MockNotifier) PartyPlayerJoined(ctx context.Context, partyId primitive.ObjectID, player *model.PartyMember) {
 	m.ctrl.T.Helper()
