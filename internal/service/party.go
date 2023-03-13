@@ -101,6 +101,21 @@ func (p *partyService) EmptyParty(ctx context.Context, request *pb.EmptyPartyReq
 
 	p.notif.PartyEmptied(ctx, party)
 
+	// Go through all the members and make them a new party.
+	for _, member := range party.Members {
+		if member.PlayerId == party.LeaderId {
+			continue
+		}
+
+		newParty := model.NewParty(member.PlayerId, member.Username)
+		err = p.repo.CreateParty(ctx, newParty)
+		if err != nil {
+			return nil, err
+		}
+
+		p.notif.PartyCreated(ctx, newParty)
+	}
+
 	return &pb.EmptyPartyResponse{}, nil
 }
 
@@ -258,25 +273,24 @@ func (p *partyService) InvitePlayer(ctx context.Context, request *pb.InvitePlaye
 	}
 
 	if party.LeaderId != issuerId {
-		// TODO check permissions since they aren't the leader
-
 		if !settings.AllowMemberInvite {
 			return nil, inviteMustBeLeaderErr
 		}
 	}
 
 	// Check if the target is already in a party
-	targetPartyId, err := p.repo.GetPartyIdByMemberId(ctx, targetId)
-	if err == nil {
-		if targetPartyId == party.Id {
-			return nil, inviteTargetInSelfPartyErr
-		} else {
-			return nil, inviteTargetInOtherPartyErr
-		}
+	targetParty, err := p.repo.GetPartyByMemberId(ctx, targetId)
+	if err != nil {
+		return nil, err
 	}
 
-	if err != mongo.ErrNoDocuments {
-		return nil, err
+	if targetParty.Id == party.Id {
+		return nil, inviteTargetInSelfPartyErr
+	}
+
+	// If the target is in another party, check if there's more than just themselves
+	if len(targetParty.Members) > 1 {
+		return nil, inviteTargetInOtherPartyErr
 	}
 
 	// Check if the target is already invited
