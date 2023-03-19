@@ -73,7 +73,7 @@ func TestMain(m *testing.M) {
 		}
 
 		// Ping was successful, let's create the mongo repo
-		repo, err = NewMongoRepository(context.Background(), config.MongoDBConfig{URI: uri})
+		repo, err = NewMongoRepository(context.Background(), &config.MongoDBConfig{URI: uri})
 		database = dbClient.Database(databaseName)
 
 		return

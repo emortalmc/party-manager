@@ -38,7 +38,7 @@ func Run(ctx context.Context, cfg *config.Config, logger *zap.SugaredLogger) {
 		return
 	}
 
-	notif, err := notifier.NewRabbitMqNotifier(logger, rabbitConn)
+	notif := notifier.NewKafkaNotifier(logger, cfg.Kafka)
 	if err != nil {
 		logger.Fatalw("failed to create rabbitmq notifier", err)
 		return

@@ -3,12 +3,13 @@ module party-manager
 go 1.20
 
 require (
-	github.com/emortalmc/proto-specs v0.0.0-20230312234907-20df233e23c3
+	github.com/emortalmc/proto-specs v0.0.0-20230318224421-426179157f90
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/ory/dockertest/v3 v3.9.1
 	github.com/rabbitmq/amqp091-go v1.7.0
+	github.com/segmentio/kafka-go v0.4.39
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.2
 	github.com/zakshearman/go-grpc-health v0.0.0-20230228185502-9e7f9da964a5
@@ -45,6 +46,7 @@ require (
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/opencontainers/runc v1.1.4 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.7 // indirect
+	github.com/pierrec/lz4/v4 v4.1.15 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect

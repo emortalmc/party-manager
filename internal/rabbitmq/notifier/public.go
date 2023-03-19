@@ -5,12 +5,9 @@ import (
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"party-manager/internal/repository/model"
-	"time"
 )
 
 type Notifier interface {
-	HealthCheck(ctx context.Context, timeout time.Duration) error
-
 	PartyCreated(ctx context.Context, party *model.Party)
 	PartyDeleted(ctx context.Context, party *model.Party)
 	PartyEmptied(ctx context.Context, party *model.Party)

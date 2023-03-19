@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"log"
 	"party-manager/internal/rabbitmq/notifier"
 	"party-manager/internal/repository"
 	"party-manager/internal/repository/model"
@@ -99,7 +100,9 @@ func (p *partyService) EmptyParty(ctx context.Context, request *pb.EmptyPartyReq
 		}
 	}
 
+	startTime := time.Now().UnixMilli()
 	p.notif.PartyEmptied(ctx, party)
+	log.Printf("(PartyEmptied notif) took: %dms", time.Now().UnixMilli()-startTime)
 
 	// Go through all the members and make them a new party.
 	for _, member := range party.Members {

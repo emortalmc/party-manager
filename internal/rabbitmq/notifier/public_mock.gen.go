@@ -8,7 +8,6 @@ import (
 	context "context"
 	model "party-manager/internal/repository/model"
 	reflect "reflect"
-	time "time"
 
 	gomock "github.com/golang/mock/gomock"
 	uuid "github.com/google/uuid"
@@ -36,20 +35,6 @@ func NewMockNotifier(ctrl *gomock.Controller) *MockNotifier {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockNotifier) EXPECT() *MockNotifierMockRecorder {
 	return m.recorder
-}
-
-// HealthCheck mocks base method.
-func (m *MockNotifier) HealthCheck(ctx context.Context, timeout time.Duration) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HealthCheck", ctx, timeout)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// HealthCheck indicates an expected call of HealthCheck.
-func (mr *MockNotifierMockRecorder) HealthCheck(ctx, timeout interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HealthCheck", reflect.TypeOf((*MockNotifier)(nil).HealthCheck), ctx, timeout)
 }
 
 // PartyCreated mocks base method.

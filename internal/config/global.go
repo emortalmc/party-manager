@@ -6,8 +6,9 @@ import (
 )
 
 type Config struct {
-	MongoDB  MongoDBConfig
-	RabbitMQ RabbitMQConfig
+	MongoDB  *MongoDBConfig
+	RabbitMQ *RabbitMQConfig
+	Kafka    *KafkaConfig
 
 	Port        uint16
 	Development bool
@@ -21,6 +22,11 @@ type RabbitMQConfig struct {
 	Host     string
 	Username string
 	Password string
+}
+
+type KafkaConfig struct {
+	Host string
+	Port int
 }
 
 func LoadGlobalConfig() (config *Config, err error) {
