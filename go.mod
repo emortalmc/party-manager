@@ -6,7 +6,7 @@ require (
 	github.com/emortalmc/proto-specs v0.0.0-20230318224421-426179157f90
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
-	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
+	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/ory/dockertest/v3 v3.9.1
 	github.com/rabbitmq/amqp091-go v1.7.0
 	github.com/segmentio/kafka-go v0.4.39
