@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"party-manager/internal/repository"
+	"party-manager/internal/repository/model"
 )
 
 type partySettingsService struct {
@@ -51,7 +52,10 @@ func (p partySettingsService) GetPartySettings(ctx context.Context, request *pb.
 
 	settings, err := p.repo.GetPartySettings(ctx, playerId)
 	if err != nil {
-		return nil, status.New(codes.Internal, "error getting party settings").Err()
+		if err == mongo.ErrNoDocuments {
+			return &pb.GetPartySettingsResponse{Settings: model.NewPartySettings(playerId).ToProto()}, nil
+		}
+		return nil, err
 	}
 
 	return &pb.GetPartySettingsResponse{
@@ -67,7 +71,7 @@ func (p partySettingsService) UpdatePartySettings(ctx context.Context, request *
 
 	settings, err := p.repo.GetPartySettings(ctx, playerId)
 	if err != nil {
-		return nil, status.New(codes.Internal, "error getting party settings").Err()
+		return nil, err
 	}
 
 	if request.DequeueOnDisconnect != nil {

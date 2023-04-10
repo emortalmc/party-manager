@@ -11,9 +11,10 @@ import (
 	"go.uber.org/zap/zapcore"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/reflection"
 	"net"
 	"party-manager/internal/config"
-	"party-manager/internal/rabbitmq/listener"
+	"party-manager/internal/rabbitmq/kafka_listener"
 	"party-manager/internal/rabbitmq/notifier"
 	"party-manager/internal/repository"
 	"party-manager/internal/service"
@@ -59,6 +60,10 @@ func Run(ctx context.Context, cfg *config.Config, logger *zap.SugaredLogger) {
 			}
 		})),
 	))
+
+	if cfg.Development {
+		reflection.Register(s)
+	}
 
 	partySvc := service.NewPartyService(notif, repo)
 	partySettingsSvc := service.NewPartySettingsService(repo)
