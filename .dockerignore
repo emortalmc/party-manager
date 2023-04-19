@@ -1,0 +1,6 @@
+*
+!cmd
+!internal
+!run/config.yaml
+!go.mod
+!go.sum
