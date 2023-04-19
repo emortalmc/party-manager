@@ -45,7 +45,7 @@ func TestMain(m *testing.M) {
 
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "mongo",
-		Tag:        "6.0.3",
+		Tag:        "6.0.5",
 		Env: []string{
 			"MONGO_INITDB_ROOT_USERNAME=root",
 			"MONGO_INITDB_ROOT_PASSWORD=password",
@@ -87,10 +87,6 @@ func TestMain(m *testing.M) {
 
 	if err := pool.Purge(resource); err != nil {
 		log.Fatalf("could not purge resource: %s", err)
-	}
-
-	if err = dbClient.Disconnect(context.Background()); err != nil {
-		log.Panicf("could not disconnect from mongo: %s", err)
 	}
 
 	os.Exit(code)
