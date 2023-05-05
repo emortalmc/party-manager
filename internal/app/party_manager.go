@@ -27,7 +27,7 @@ func Run(cfg *config.Config, logger *zap.SugaredLogger) {
 
 	notif := kafka.NewKafkaNotifier(delayedCtx, delayedWg, cfg.Kafka, logger)
 	if err != nil {
-		logger.Fatalw("failed to create rabbitmq notifier", err)
+		logger.Fatalw("failed to create kafka notifier", err)
 	}
 
 	kafka.NewConsumer(ctx, wg, cfg.Kafka, logger, notif, repo)
