@@ -3,12 +3,11 @@ module party-manager
 go 1.20
 
 require (
-	github.com/emortalmc/proto-specs v0.0.0-20230324201235-cfbfaa9f2eaf
+	github.com/emortalmc/proto-specs/gen/go v0.0.0-20230504195338-987060da628d
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/ory/dockertest/v3 v3.10.0
-	github.com/rabbitmq/amqp091-go v1.8.0
 	github.com/segmentio/kafka-go v0.4.39
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.2
@@ -63,6 +62,7 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	go.uber.org/atomic v1.10.0 // indirect
+	go.uber.org/goleak v1.2.1 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/crypto v0.6.0 // indirect
 	golang.org/x/mod v0.9.0 // indirect

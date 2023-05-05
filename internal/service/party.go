@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"log"
-	"party-manager/internal/rabbitmq/notifier"
+	"party-manager/internal/kafka"
 	"party-manager/internal/repository"
 	"party-manager/internal/repository/model"
 	"time"
@@ -20,11 +20,11 @@ import (
 type partyService struct {
 	pb.PartyServiceServer
 
-	notif notifier.Notifier
+	notif kafka.Notifier
 	repo  repository.Repository
 }
 
-func NewPartyService(notifier notifier.Notifier, repo repository.Repository) pb.PartyServiceServer {
+func newPartyService(notifier kafka.Notifier, repo repository.Repository) pb.PartyServiceServer {
 	return &partyService{
 		notif: notifier,
 		repo:  repo,

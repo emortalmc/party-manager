@@ -1,14 +1,9 @@
-mongodb:
-  uri: mongodb://localhost:27017
-
-rabbitmq:
-  host: localhost
-  username: guest
-  password: guest
-
 kafka:
   host: localhost
   port: 9092
+
+mongodb:
+  uri: mongodb://localhost:27017
 
 port: 10006
 

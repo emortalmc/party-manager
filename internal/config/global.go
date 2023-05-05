@@ -6,9 +6,8 @@ import (
 )
 
 type Config struct {
-	MongoDB  *MongoDBConfig
-	RabbitMQ *RabbitMQConfig
-	Kafka    *KafkaConfig
+	Kafka   *KafkaConfig
+	MongoDB *MongoDBConfig
 
 	Port        uint16
 	Development bool
@@ -16,12 +15,6 @@ type Config struct {
 
 type MongoDBConfig struct {
 	URI string
-}
-
-type RabbitMQConfig struct {
-	Host     string
-	Username string
-	Password string
 }
 
 type KafkaConfig struct {

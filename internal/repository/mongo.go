@@ -4,14 +4,17 @@ import (
 	"context"
 	"errors"
 	"github.com/google/uuid"
+	"github.com/zakshearman/go-grpc-health/pkg/health"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/bsoncodec"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.uber.org/zap"
 	"party-manager/internal/config"
 	"party-manager/internal/repository/model"
 	"party-manager/internal/repository/registrytypes"
+	"sync"
 	"time"
 )
 
@@ -31,7 +34,7 @@ var (
 )
 
 type mongoRepository struct {
-	Repository
+	logger *zap.SugaredLogger
 
 	database *mongo.Database
 
@@ -40,27 +43,45 @@ type mongoRepository struct {
 	partySettingsCollection *mongo.Collection
 }
 
-func NewMongoRepository(ctx context.Context, cfg *config.MongoDBConfig) (Repository, error) {
+func NewMongoRepository(ctx context.Context, logger *zap.SugaredLogger, wg *sync.WaitGroup, cfg *config.MongoDBConfig) (Repository, error) {
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.URI).SetRegistry(createCodecRegistry()))
 	if err != nil {
 		return nil, err
 	}
 
 	database := client.Database(databaseName)
-	return &mongoRepository{
+	repo := &mongoRepository{
+		logger: logger,
+
 		database: database,
 
 		partyCollection:         database.Collection(partyCollectionName),
 		partyInviteCollection:   database.Collection(partyInviteCollectionName),
 		partySettingsCollection: database.Collection(partySettingsCollectionName),
-	}, nil
+	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-ctx.Done()
+		if err := client.Disconnect(ctx); err != nil {
+			logger.Errorw("failed to disconnect from mongo", err)
+		}
+	}()
+
+	return repo, nil
 }
 
-func (m *mongoRepository) HealthCheck(ctx context.Context, timeout time.Duration) error {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+func (m *mongoRepository) HealthCheck(ctx context.Context) health.HealthStatus {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	return m.database.Client().Ping(ctx, nil)
+	err := m.database.Client().Ping(ctx, nil)
+	if err != nil {
+		m.logger.Errorw("failed to health check repository", err)
+		return health.HealthStatusUnhealthy
+	}
+	return health.HealthStatusHealthy
 }
 
 func (m *mongoRepository) IsInParty(ctx context.Context, playerId uuid.UUID) (bool, error) {
@@ -210,11 +231,27 @@ func (m *mongoRepository) GetPartyLeaderIdByMemberId(ctx context.Context, player
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	// Get only the id of the party
+	// Get only the leaderId of the party
 	var result struct {
 		LeaderId uuid.UUID `bson:"leaderId"`
 	}
 	err := m.partyCollection.FindOne(ctx, bson.M{"members.playerId": playerId}, options.FindOne().SetProjection(bson.M{"leaderId": 1})).Decode(&result)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return result.LeaderId, nil
+}
+
+func (m *mongoRepository) GetPartyLeaderByPartyId(ctx context.Context, partyId primitive.ObjectID) (uuid.UUID, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	// Get only the leaderId of the party
+	var result struct {
+		LeaderId uuid.UUID `bson:"leaderId"`
+	}
+	err := m.partyCollection.FindOne(ctx, bson.M{"_id": partyId}, options.FindOne().SetProjection(bson.M{"leaderId": 1})).Decode(&result)
 	if err != nil {
 		return uuid.Nil, err
 	}

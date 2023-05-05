@@ -1,7 +1,7 @@
 mockgen:
 	go install github.com/golang/mock/mockgen@v1.6.0
 	mockgen -source=internal/repository/public.go -destination=internal/repository/public_mock.gen.go -package=repository
-	mockgen -source=internal/rabbitmq/notifier/public.go -destination=internal/rabbitmq/notifier/public_mock.gen.go -package=notifier
+	mockgen -source=internal/kafka/writer.go -destination=internal/kafka/writer.gen.go -package=kafka
 
 lint:
 	golangci-lint run

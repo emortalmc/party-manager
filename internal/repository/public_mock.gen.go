@@ -8,10 +8,10 @@ import (
 	context "context"
 	model "party-manager/internal/repository/model"
 	reflect "reflect"
-	time "time"
 
 	gomock "github.com/golang/mock/gomock"
 	uuid "github.com/google/uuid"
+	health "github.com/zakshearman/go-grpc-health/pkg/health"
 	primitive "go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -243,17 +243,17 @@ func (mr *MockRepositoryMockRecorder) GetPartySettings(ctx, playerId interface{}
 }
 
 // HealthCheck mocks base method.
-func (m *MockRepository) HealthCheck(ctx context.Context, timeout time.Duration) error {
+func (m *MockRepository) HealthCheck(ctx context.Context) health.HealthStatus {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HealthCheck", ctx, timeout)
-	ret0, _ := ret[0].(error)
+	ret := m.ctrl.Call(m, "HealthCheck", ctx)
+	ret0, _ := ret[0].(health.HealthStatus)
 	return ret0
 }
 
 // HealthCheck indicates an expected call of HealthCheck.
-func (mr *MockRepositoryMockRecorder) HealthCheck(ctx, timeout interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) HealthCheck(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HealthCheck", reflect.TypeOf((*MockRepository)(nil).HealthCheck), ctx, timeout)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HealthCheck", reflect.TypeOf((*MockRepository)(nil).HealthCheck), ctx)
 }
 
 // IsInParty mocks base method.

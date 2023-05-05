@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"party-manager/internal/rabbitmq/notifier"
+	"party-manager/internal/kafka"
 	"party-manager/internal/repository"
 	"party-manager/internal/repository/model"
 	"testing"
@@ -102,7 +102,7 @@ func TestPartyService_EmptyParty(t *testing.T) {
 				repo.EXPECT().DeletePartyInvitesByPartyId(ctx, tt.deletePartyReq).Return(tt.deletePartyInvitesByPartyIdErr)
 			}
 
-			notif := notifier.NewMockNotifier(mockCntrl)
+			notif := kafka.NewMockNotifier(mockCntrl)
 			// If there are no errors yet, expect a notification
 			if tt.deletePartyErr == nil && tt.getPartyByIdErr == nil && tt.getPartyByMemberIdErr == nil {
 				var party *model.Party
@@ -114,7 +114,7 @@ func TestPartyService_EmptyParty(t *testing.T) {
 				notif.EXPECT().PartyEmptied(ctx, party)
 			}
 
-			s := NewPartyService(notif, repo)
+			s := newPartyService(notif, repo)
 
 			res, err := s.EmptyParty(ctx, tt.req)
 			assert.Equalf(t, tt.wantErr, err, "wantErr: %+v, got: %+v", tt.wantErr, err)
@@ -226,9 +226,9 @@ func TestPartyService_GetParty(t *testing.T) {
 				repo.EXPECT().GetPartyByMemberId(ctx, tt.getPartyByMemberIdReq).Return(tt.getPartyByMemberIdRes, tt.getPartyByMemberIdErr)
 			}
 
-			notif := notifier.NewMockNotifier(mockCntrl)
+			notif := kafka.NewMockNotifier(mockCntrl)
 
-			s := NewPartyService(notif, repo)
+			s := newPartyService(notif, repo)
 
 			res, err := s.GetParty(ctx, tt.req)
 			assert.Equalf(t, tt.wantErr, err, "wantErr: %+v, got: %+v", tt.wantErr, err)
@@ -336,9 +336,9 @@ func TestPartyService_GetPartyInvites(t *testing.T) {
 				repo.EXPECT().GetPartyInvitesByPartyId(ctx, tt.getPartyInvitesByPartyIdReq).Return(tt.getPartyInvitesByPartyIdRes, tt.getPartyInvitesByPartyIdErr)
 			}
 
-			notif := notifier.NewMockNotifier(mockCntrl)
+			notif := kafka.NewMockNotifier(mockCntrl)
 
-			s := NewPartyService(notif, repo)
+			s := newPartyService(notif, repo)
 
 			res, err := s.GetPartyInvites(ctx, tt.req)
 			assert.Equalf(t, tt.wantErr, err, "wantErr: %+v, got: %+v", tt.wantErr, err)

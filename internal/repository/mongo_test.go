@@ -11,10 +11,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.uber.org/zap"
 	"log"
 	"os"
 	"party-manager/internal/config"
 	"party-manager/internal/repository/model"
+	"sync"
 	"testing"
 	"time"
 )
@@ -60,6 +62,12 @@ func TestMain(m *testing.M) {
 		log.Fatalf("could not start resource: %s", err)
 	}
 
+	unsugaredLogger, err := zap.NewDevelopment()
+	if err != nil {
+		log.Fatalf("could not create logger: %s", err)
+	}
+	logger := unsugaredLogger.Sugar()
+
 	uri := fmt.Sprintf(mongoUri, resource.GetPort("27017/tcp"))
 
 	err = pool.Retry(func() (err error) {
@@ -73,7 +81,7 @@ func TestMain(m *testing.M) {
 		}
 
 		// Ping was successful, let's create the mongo repo
-		repo, err = NewMongoRepository(context.Background(), &config.MongoDBConfig{URI: uri})
+		repo, err = NewMongoRepository(context.Background(), logger, &sync.WaitGroup{}, &config.MongoDBConfig{URI: uri})
 		database = dbClient.Database(databaseName)
 
 		return

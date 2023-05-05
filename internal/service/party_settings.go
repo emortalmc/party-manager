@@ -18,13 +18,13 @@ type partySettingsService struct {
 	repo repository.Repository
 }
 
-func NewPartySettingsService(repo repository.Repository) pb.PartySettingsServiceServer {
+func newPartySettingsService(repo repository.Repository) pb.PartySettingsServiceServer {
 	return &partySettingsService{
 		repo: repo,
 	}
 }
 
-func (p partySettingsService) GetPartySettings(ctx context.Context, request *pb.GetPartySettingsRequest) (*pb.GetPartySettingsResponse, error) {
+func (p *partySettingsService) GetPartySettings(ctx context.Context, request *pb.GetPartySettingsRequest) (*pb.GetPartySettingsResponse, error) {
 	var playerId uuid.UUID
 
 	if request.GetPartyId() != "" {
@@ -63,7 +63,7 @@ func (p partySettingsService) GetPartySettings(ctx context.Context, request *pb.
 	}, nil
 }
 
-func (p partySettingsService) UpdatePartySettings(ctx context.Context, request *pb.UpdatePartySettingsRequest) (*pb.UpdatePartySettingsResponse, error) {
+func (p *partySettingsService) UpdatePartySettings(ctx context.Context, request *pb.UpdatePartySettingsRequest) (*pb.UpdatePartySettingsResponse, error) {
 	playerId, err := uuid.Parse(request.IssuerId)
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, "issuerId is invalid").Err()

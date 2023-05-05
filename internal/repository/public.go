@@ -3,13 +3,13 @@ package repository
 import (
 	"context"
 	"github.com/google/uuid"
+	"github.com/zakshearman/go-grpc-health/pkg/health"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"party-manager/internal/repository/model"
-	"time"
 )
 
 type Repository interface {
-	HealthCheck(ctx context.Context, timeout time.Duration) error
+	HealthCheck(ctx context.Context) health.HealthStatus
 
 	IsInParty(ctx context.Context, playerId uuid.UUID) (bool, error)
 
