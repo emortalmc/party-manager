@@ -10,7 +10,7 @@ require (
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/segmentio/kafka-go v0.4.39
 	github.com/spf13/viper v1.15.0
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.8.3
 	github.com/zakshearman/go-grpc-health v0.0.0-20230228185502-9e7f9da964a5
 	go.mongodb.org/mongo-driver v1.11.4
 	go.uber.org/zap v1.24.0
