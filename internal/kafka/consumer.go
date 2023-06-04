@@ -74,15 +74,10 @@ func (c *consumer) handlePlayerConnect(ctx context.Context, _ *kafka.Message, un
 	}
 
 	// create a party for the player
-	party := model.NewParty(playerId, m.PlayerUsername)
-
-	err = c.repo.CreateParty(ctx, party)
-	if err != nil {
-		c.logger.Errorw("failed to create party", err)
+	if err := c.createPartyForPlayer(ctx, playerId, m.PlayerUsername); err != nil {
+		c.logger.Errorw("failed to create party for player", err, "playerId", playerId, "playerUsername", m.PlayerUsername)
 		return
 	}
-
-	c.notif.PartyCreated(ctx, party)
 }
 
 func (c *consumer) handlePlayerDisconnect(ctx context.Context, _ *kafka.Message, uncastMsg proto.Message) {
@@ -112,6 +107,18 @@ func (c *consumer) handlePlayerDisconnect(ctx context.Context, _ *kafka.Message,
 		}
 
 		c.notif.PartyDeleted(ctx, party)
+
+		// Put player in their own party now
+		for _, member := range party.Members {
+			if member.PlayerId == playerId {
+				continue
+			}
+
+			if err := c.createPartyForPlayer(ctx, member.PlayerId, member.Username); err != nil {
+				c.logger.Errorw("failed to create party for player", err, "playerId", playerId, "playerUsername", m.PlayerUsername)
+				continue
+			}
+		}
 		return
 	}
 
@@ -127,4 +134,15 @@ func (c *consumer) handlePlayerDisconnect(ctx context.Context, _ *kafka.Message,
 	}
 
 	c.notif.PartyPlayerLeft(ctx, party.Id, partyMember)
+}
+
+func (c *consumer) createPartyForPlayer(ctx context.Context, playerId uuid.UUID, username string) error {
+	party := model.NewParty(playerId, username)
+
+	if err := c.repo.CreateParty(ctx, party); err != nil {
+		return fmt.Errorf("failed to create party: %w", err)
+	}
+
+	c.notif.PartyCreated(ctx, party)
+	return nil
 }

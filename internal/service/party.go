@@ -231,7 +231,8 @@ func (p *partyService) GetPartyInvites(ctx context.Context, request *pb.GetParty
 }
 
 var (
-	inviteMustBeLeaderErr = status.New(codes.PermissionDenied, "player must be leader").Err()
+	inviteMustBeLeaderErr = panicIfErr(status.New(codes.PermissionDenied, "player must be leader").
+				WithDetails(&pb.InvitePlayerErrorResponse{ErrorType: pb.InvitePlayerErrorResponse_NO_PERMISSION})).Err()
 
 	inviteAlreadyInvitedErr = panicIfErr(status.New(codes.AlreadyExists, "player is already invited").
 				WithDetails(&pb.InvitePlayerErrorResponse{ErrorType: pb.InvitePlayerErrorResponse_TARGET_ALREADY_INVITED})).Err()
