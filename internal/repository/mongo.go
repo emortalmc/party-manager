@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/zakshearman/go-grpc-health/pkg/health"
 	"go.mongodb.org/mongo-driver/bson"
@@ -69,7 +70,68 @@ func NewMongoRepository(ctx context.Context, logger *zap.SugaredLogger, wg *sync
 		}
 	}()
 
+	repo.createIndexes(ctx)
+	logger.Infow("created mongo indexes")
+
 	return repo, nil
+}
+
+var (
+	partyIndexes = []mongo.IndexModel{
+		{
+			Keys:    bson.M{"leaderId": 1},
+			Options: options.Index().SetName("leaderId").SetUnique(true),
+		},
+		{
+			Keys:    bson.M{"members.playerId": 1},
+			Options: options.Index().SetName("members_playerId").SetUnique(true),
+		},
+	}
+
+	partyInviteIndexes = []mongo.IndexModel{
+		{
+			Keys:    bson.M{"partyId": 1},
+			Options: options.Index().SetName("partyId"),
+		},
+		{
+			Keys:    bson.D{{Key: "partyId", Value: 1}, {Key: "targetId", Value: 1}},
+			Options: options.Index().SetName("partyId_targetId").SetUnique(true),
+		},
+	}
+)
+
+func (m *mongoRepository) createIndexes(ctx context.Context) {
+	collIndexes := map[*mongo.Collection][]mongo.IndexModel{
+		m.partyCollection:       partyIndexes,
+		m.partyInviteCollection: partyInviteIndexes,
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(len(collIndexes))
+
+	for coll, indexes := range collIndexes {
+		go func(coll *mongo.Collection, indexes []mongo.IndexModel) {
+			defer wg.Done()
+			_, err := m.createCollIndexes(ctx, coll, indexes)
+			if err != nil {
+				panic(fmt.Sprintf("failed to create indexes for collection %s: %s", coll.Name(), err))
+			}
+		}(coll, indexes)
+	}
+
+	wg.Wait()
+}
+
+func (m *mongoRepository) createCollIndexes(ctx context.Context, coll *mongo.Collection, indexes []mongo.IndexModel) (int, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	result, err := coll.Indexes().CreateMany(ctx, indexes)
+	if err != nil {
+		return 0, err
+	}
+
+	return len(result), nil
 }
 
 func (m *mongoRepository) HealthCheck(ctx context.Context) health.HealthStatus {
