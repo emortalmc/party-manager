@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: party-manager
-          image: ghcr.io/emortalmc/party-manager:b3e6bfd2c49a6e6aa6c3b436e88f8945be88c15e
+          image: ghcr.io/emortalmc/party-manager:6a0736ff06df5370bf172f3a7bb36e69206d4f97
           ports:
             - name: grpc
               containerPort: 9010
