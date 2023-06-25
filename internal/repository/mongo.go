@@ -97,6 +97,10 @@ var (
 			Keys:    bson.D{{Key: "partyId", Value: 1}, {Key: "targetId", Value: 1}},
 			Options: options.Index().SetName("partyId_targetId").SetUnique(true),
 		},
+		{
+			Keys:    bson.M{"expiresAt": 1},
+			Options: options.Index().SetName("expiresAt_TTL").SetExpireAfterSeconds(0),
+		},
 	}
 )
 
