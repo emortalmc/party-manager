@@ -237,14 +237,8 @@ var (
 	inviteAlreadyInvitedErr = panicIfErr(status.New(codes.AlreadyExists, "player is already invited").
 				WithDetails(&pb.InvitePlayerErrorResponse{ErrorType: pb.InvitePlayerErrorResponse_TARGET_ALREADY_INVITED})).Err()
 
-	errInvitePartyIsOpen = panicIfErr(status.New(codes.FailedPrecondition, "party is open").
-				WithDetails(&pb.InvitePlayerErrorResponse{ErrorType: pb.InvitePlayerErrorResponse_PARTY_IS_OPEN})).Err()
-
 	inviteTargetInSelfPartyErr = panicIfErr(status.New(codes.AlreadyExists, "target is already in the party").
 					WithDetails(&pb.InvitePlayerErrorResponse{ErrorType: pb.InvitePlayerErrorResponse_TARGET_ALREADY_IN_SELF_PARTY})).Err()
-
-	inviteTargetInOtherPartyErr = panicIfErr(status.New(codes.AlreadyExists, "target is already in another party").
-					WithDetails(&pb.InvitePlayerErrorResponse{ErrorType: pb.InvitePlayerErrorResponse_TARGET_ALREADY_IN_ANOTHER_PARTY})).Err()
 )
 
 // InvitePlayer invites a player to the party of the inviter
@@ -272,10 +266,6 @@ func (p *partyService) InvitePlayer(ctx context.Context, request *pb.InvitePlaye
 		return nil, err
 	}
 
-	if party.Open {
-		return nil, errInvitePartyIsOpen
-	}
-
 	if party.LeaderId != issuerId {
 		if !settings.AllowMemberInvite {
 			return nil, inviteMustBeLeaderErr
@@ -290,11 +280,6 @@ func (p *partyService) InvitePlayer(ctx context.Context, request *pb.InvitePlaye
 
 	if targetParty.Id == party.Id {
 		return nil, inviteTargetInSelfPartyErr
-	}
-
-	// If the target is in another party, check if there's more than just themselves
-	if len(targetParty.Members) > 1 {
-		return nil, inviteTargetInOtherPartyErr
 	}
 
 	// Check if the target is already invited
