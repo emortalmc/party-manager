@@ -9,6 +9,7 @@ import (
 	"github.com/segmentio/kafka-go"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
+	"math/rand"
 	"party-manager/internal/config"
 	"party-manager/internal/repository"
 	"party-manager/internal/repository/model"
@@ -95,33 +96,6 @@ func (c *consumer) handlePlayerDisconnect(ctx context.Context, _ *kafka.Message,
 		return
 	}
 
-	if playerId == party.LeaderId {
-		if err := c.repo.DeleteParty(ctx, party.Id); err != nil {
-			c.logger.Errorw("failed to delete party", err)
-			return
-		}
-
-		if err := c.repo.DeletePartyInvitesByPartyId(ctx, party.Id); err != nil {
-			c.logger.Errorw("failed to delete party invites", err)
-			return
-		}
-
-		c.notif.PartyDeleted(ctx, party)
-
-		// Put player in their own party now
-		for _, member := range party.Members {
-			if member.PlayerId == playerId {
-				continue
-			}
-
-			if err := c.createPartyForPlayer(ctx, member.PlayerId, member.Username); err != nil {
-				c.logger.Errorw("failed to create party for player", err, "playerId", playerId, "playerUsername", m.PlayerUsername)
-				continue
-			}
-		}
-		return
-	}
-
 	if err := c.repo.RemoveMemberFromParty(ctx, party.Id, playerId); err != nil {
 		c.logger.Errorw("failed to remove member from party", err)
 		return
@@ -134,6 +108,30 @@ func (c *consumer) handlePlayerDisconnect(ctx context.Context, _ *kafka.Message,
 	}
 
 	c.notif.PartyPlayerLeft(ctx, party.Id, partyMember)
+
+	if playerId == party.LeaderId && len(party.Members) > 1 {
+		newLeader := c.electNewPartyLeader(party, playerId)
+
+		if err := c.repo.SetPartyLeader(ctx, party.Id, newLeader.PlayerId); err != nil {
+			c.logger.Errorw("failed to set party leader", err)
+			return
+		}
+
+		c.notif.PartyLeaderChanged(ctx, party.Id, newLeader)
+	}
+}
+
+func (c *consumer) electNewPartyLeader(party *model.Party, currentLeaderId uuid.UUID) *model.PartyMember {
+	members := make([]*model.PartyMember, len(party.Members)-1)
+	for _, member := range party.Members {
+		if member.PlayerId == currentLeaderId {
+			continue
+		}
+		members = append(members, member)
+	}
+
+	newLeader := members[rand.Intn(len(members))]
+	return newLeader
 }
 
 func (c *consumer) createPartyForPlayer(ctx context.Context, playerId uuid.UUID, username string) error {
