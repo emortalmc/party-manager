@@ -96,6 +96,25 @@ func (c *consumer) handlePlayerDisconnect(ctx context.Context, _ *kafka.Message,
 		return
 	}
 
+	// Party only has the leader in it
+	if playerId == party.LeaderId && len(party.Members) < 2 {
+		if err := c.repo.DeleteParty(ctx, party.Id); err != nil {
+			c.logger.Errorw("failed to delete party", err)
+			return
+		}
+
+		if err := c.repo.DeletePartyInvitesByPartyId(ctx, party.Id); err != nil {
+			c.logger.Errorw("failed to delete party invites", err)
+			return
+		}
+
+		c.notif.PartyDeleted(ctx, party)
+		return
+	}
+
+	// Player may still be the party leader, but it has more than 1 member.
+	// As a result, do a new leader election.
+
 	if err := c.repo.RemoveMemberFromParty(ctx, party.Id, playerId); err != nil {
 		c.logger.Errorw("failed to remove member from party", err)
 		return
