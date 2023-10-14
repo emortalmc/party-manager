@@ -128,8 +128,13 @@ func (c *consumer) handlePlayerDisconnect(ctx context.Context, _ *kafka.Message,
 
 	c.notif.PartyPlayerLeft(ctx, party.Id, partyMember)
 
-	if playerId == party.LeaderId && len(party.Members) > 1 {
-		newLeader := c.electNewPartyLeader(party, playerId)
+	// If the player is the current leader, elect a new leader
+	if playerId == party.LeaderId {
+		newLeader, err := electNewPartyLeader(party)
+		if err != nil {
+			c.logger.Errorw("failed to elect new party leader", err)
+			return // todo don't just return here - it leaves the party in a broken state. Very bad.
+		}
 
 		if err := c.repo.SetPartyLeader(ctx, party.Id, newLeader.PlayerId); err != nil {
 			c.logger.Errorw("failed to set party leader", err)
@@ -140,17 +145,29 @@ func (c *consumer) handlePlayerDisconnect(ctx context.Context, _ *kafka.Message,
 	}
 }
 
-func (c *consumer) electNewPartyLeader(party *model.Party, currentLeaderId uuid.UUID) *model.PartyMember {
+var leaderElectionNotEnoughMembersErr = fmt.Errorf("party member count must be >= 2")
+
+// electNewPartyLeader elects a member of the party as a new leader of the party and returns the member that is the new
+// leader. It assumes that party.LeaderId is still current to ignore them as a candidate for the new leader.
+func electNewPartyLeader(party *model.Party) (*model.PartyMember, error) {
+	if len(party.Members) < 2 {
+		return nil, leaderElectionNotEnoughMembersErr
+	}
+
 	members := make([]*model.PartyMember, len(party.Members)-1)
+
+	i := 0
 	for _, member := range party.Members {
-		if member.PlayerId == currentLeaderId {
+		if member.PlayerId == party.LeaderId {
 			continue
 		}
-		members = append(members, member)
+
+		members[i] = member
+		i++
 	}
 
 	newLeader := members[rand.Intn(len(members))]
-	return newLeader
+	return newLeader, nil
 }
 
 func (c *consumer) createPartyForPlayer(ctx context.Context, playerId uuid.UUID, username string) error {
