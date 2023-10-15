@@ -1,6 +1,6 @@
 module party-manager
 
-go 1.20
+go 1.21
 
 require (
 	github.com/emortalmc/proto-specs/gen/go v0.0.0-20230603170831-d1d6d4a9b1de
