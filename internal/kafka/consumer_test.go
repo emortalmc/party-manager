@@ -6,12 +6,22 @@ import (
 	"testing"
 )
 
-func TestElectNewPartyLeader(t *testing.T) {
-	uIds := utils.RandomUuidSlice(3)
+var testUuids = utils.RandomUuidSlice(15)
 
-	oneMemberParty := &model.Party{Members: []*model.PartyMember{{PlayerId: uIds[0]}}, LeaderId: uIds[0]}
-	twoMemberParty := &model.Party{Members: []*model.PartyMember{{PlayerId: uIds[0]}, {PlayerId: uIds[1]}}, LeaderId: uIds[0]}
-	threeMemberParty := &model.Party{Members: []*model.PartyMember{{PlayerId: uIds[0]}, {PlayerId: uIds[1]}, {PlayerId: uIds[2]}}, LeaderId: uIds[0]}
+func createPartyWithMemberCount(mCount int) *model.Party {
+	members := make([]*model.PartyMember, mCount)
+	for i := 0; i < mCount; i++ {
+		members[i] = &model.PartyMember{PlayerId: testUuids[i]}
+	}
+
+	return &model.Party{Members: members, LeaderId: testUuids[0]}
+}
+
+func TestElectNewPartyLeader(t *testing.T) {
+	partyMap := make(map[int]*model.Party)
+	for i := 1; i <= 10; i++ { // parties with 1-10 members
+		partyMap[i] = createPartyWithMemberCount(i)
+	}
 
 	tests := []struct {
 		name    string
@@ -24,19 +34,27 @@ func TestElectNewPartyLeader(t *testing.T) {
 	}{
 		{
 			name:    "one member",
-			party:   oneMemberParty,
+			party:   partyMap[1],
 			wantErr: leaderElectionNotEnoughMembersErr,
 		},
 		{
-			name:              "two members",
-			party:             twoMemberParty,
-			acceptableResults: []*model.PartyMember{twoMemberParty.Members[1]}, // Any member other than currentLeader
+			name:  "two members",
+			party: partyMap[2],
 		},
 		{
-			name:              "three members",
-			repeats:           1000,
-			party:             threeMemberParty,
-			acceptableResults: threeMemberParty.Members[1:],
+			name:    "three members",
+			repeats: 300,
+			party:   partyMap[3],
+		},
+		{
+			name:    "four members",
+			repeats: 400,
+			party:   partyMap[4],
+		},
+		{
+			name:    "10 members",
+			repeats: 750,
+			party:   partyMap[10],
 		},
 	}
 
@@ -52,7 +70,7 @@ func TestElectNewPartyLeader(t *testing.T) {
 					return
 				}
 
-				for _, acceptableResult := range test.acceptableResults {
+				for _, acceptableResult := range test.party.Members[1:] {
 					if res == acceptableResult {
 						return
 					}
