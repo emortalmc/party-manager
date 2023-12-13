@@ -8,7 +8,7 @@ require (
 	github.com/google/uuid v1.5.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/ory/dockertest/v3 v3.10.0
-	github.com/segmentio/kafka-go v0.4.44
+	github.com/segmentio/kafka-go v0.4.46
 	github.com/spf13/viper v1.18.1
 	github.com/stretchr/testify v1.8.4
 	github.com/zakshearman/go-grpc-health v0.0.0-20230228185502-9e7f9da964a5
