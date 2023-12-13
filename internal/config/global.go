@@ -6,8 +6,8 @@ import (
 )
 
 type Config struct {
-	Kafka   *KafkaConfig
-	MongoDB *MongoDBConfig
+	Kafka   KafkaConfig
+	MongoDB MongoDBConfig
 
 	Port        uint16
 	Development bool
@@ -22,20 +22,22 @@ type KafkaConfig struct {
 	Port int
 }
 
-func LoadGlobalConfig() (config *Config, err error) {
+func LoadGlobalConfig() (*Config, error) {
+	cfg := &Config{}
+
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 
 	viper.SetConfigName("config")
 	viper.AddConfigPath(".")
 
-	if err = viper.ReadInConfig(); err != nil {
+	if err := viper.ReadInConfig(); err != nil {
 		return nil, err
 	}
 
-	if err = viper.UnmarshalExact(&config); err != nil {
+	if err := viper.UnmarshalExact(cfg); err != nil {
 		return nil, err
 	}
 
-	return config, nil
+	return cfg, nil
 }
