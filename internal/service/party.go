@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	pb "github.com/emortalmc/proto-specs/gen/go/grpc/party"
 	pbmodel "github.com/emortalmc/proto-specs/gen/go/model/party"
@@ -340,7 +341,7 @@ func (p *partyService) JoinParty(ctx context.Context, request *pb.JoinPartyReque
 	// Check if the player is already in a party
 	playerParty, err := p.repo.GetPartyByMemberId(ctx, playerId)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get player party: %w", err)
 	}
 
 	// If the player is already in a party, they can't join another
@@ -352,16 +353,20 @@ func (p *partyService) JoinParty(ctx context.Context, request *pb.JoinPartyReque
 	// Get the target party
 	targetParty, err := p.repo.GetPartyByMemberId(ctx, targetPlayerId)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get target player's party: %w", err)
+	}
+
+	if targetParty.Id == playerParty.Id {
+		return nil, joinPartyAlreadyInPartyErr
 	}
 
 	// Try revoke the invite if it exists, handle the error if it doesn't
 	err = p.repo.DeletePartyInvite(ctx, targetParty.Id, playerId)
 	if err != nil {
 		// ignore a mongo.ErrNoDocuments error if the party is open
-		if err == mongo.ErrNoDocuments && !targetParty.Open {
+		if errors.Is(err, mongo.ErrNoDocuments) && !targetParty.Open {
 			return nil, joinPartyNotInvitedErr
-		} else if err != mongo.ErrNoDocuments {
+		} else if !errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, err
 		}
 	}
