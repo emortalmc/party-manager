@@ -41,6 +41,7 @@ func (h *handler) run(ctx context.Context, wg *sync.WaitGroup) {
 				return
 			case <-ticker.C:
 				h.runDisplayEvent(ctx)
+				h.runStartEvent(ctx)
 			}
 		}
 	}()
@@ -96,9 +97,10 @@ func (h *handler) runStartEvent(ctx context.Context) {
 				return
 			}
 		}
-	} else { // todo create a party as they are not online
-
 	}
+	//else { // todo create a party as they are not online
+	//
+	//}
 
 	// We now have a party that is open with only the owner of the event in it.
 
