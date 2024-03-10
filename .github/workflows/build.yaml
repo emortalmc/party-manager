@@ -27,5 +27,5 @@ jobs:
       - uses: "emortalmc/actions/argo-sync@main"
         with:
           deployment-name: "party-manager"
-          values-path: "grpc/values/party-manager.yaml"
+          values-path: "service/values/party-manager.yaml"
           deployments-repo-token: "${{ secrets.DEPLOYMENTS_REPO_TOKEN }}"
