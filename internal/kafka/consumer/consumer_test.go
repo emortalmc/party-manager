@@ -1,4 +1,4 @@
-package kafka
+package consumer
 
 import (
 	"party-manager/internal/repository/model"
@@ -11,7 +11,7 @@ var testUuids = utils.RandomUuidSlice(15)
 func createPartyWithMemberCount(mCount int) *model.Party {
 	members := make([]*model.PartyMember, mCount)
 	for i := 0; i < mCount; i++ {
-		members[i] = &model.PartyMember{PlayerId: testUuids[i]}
+		members[i] = &model.PartyMember{PlayerID: testUuids[i]}
 	}
 
 	return &model.Party{Members: members, LeaderId: testUuids[0]}

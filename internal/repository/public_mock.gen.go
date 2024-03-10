@@ -138,9 +138,9 @@ func (mr *MockRepositoryMockRecorder) DoesPartyInviteExist(ctx, partyId, playerI
 }
 
 // GetPartyById mocks base method.
-func (m *MockRepository) GetPartyById(ctx context.Context, partyId primitive.ObjectID) (*model.Party, error) {
+func (m *MockRepository) GetPartyByID(ctx context.Context, partyId primitive.ObjectID) (*model.Party, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPartyById", ctx, partyId)
+	ret := m.ctrl.Call(m, "GetPartyByID", ctx, partyId)
 	ret0, _ := ret[0].(*model.Party)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -149,13 +149,13 @@ func (m *MockRepository) GetPartyById(ctx context.Context, partyId primitive.Obj
 // GetPartyById indicates an expected call of GetPartyById.
 func (mr *MockRepositoryMockRecorder) GetPartyById(ctx, partyId interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPartyById", reflect.TypeOf((*MockRepository)(nil).GetPartyById), ctx, partyId)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPartyByID", reflect.TypeOf((*MockRepository)(nil).GetPartyByID), ctx, partyId)
 }
 
 // GetPartyByMemberId mocks base method.
-func (m *MockRepository) GetPartyByMemberId(ctx context.Context, playerId uuid.UUID) (*model.Party, error) {
+func (m *MockRepository) GetPartyByMemberID(ctx context.Context, playerId uuid.UUID) (*model.Party, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPartyByMemberId", ctx, playerId)
+	ret := m.ctrl.Call(m, "GetPartyByMemberID", ctx, playerId)
 	ret0, _ := ret[0].(*model.Party)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -164,7 +164,7 @@ func (m *MockRepository) GetPartyByMemberId(ctx context.Context, playerId uuid.U
 // GetPartyByMemberId indicates an expected call of GetPartyByMemberId.
 func (mr *MockRepositoryMockRecorder) GetPartyByMemberId(ctx, playerId interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPartyByMemberId", reflect.TypeOf((*MockRepository)(nil).GetPartyByMemberId), ctx, playerId)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPartyByMemberID", reflect.TypeOf((*MockRepository)(nil).GetPartyByMemberID), ctx, playerId)
 }
 
 // GetPartyIdByMemberId mocks base method.

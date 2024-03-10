@@ -23,9 +23,9 @@ func TestParty_ToProto(t *testing.T) {
 		{
 			name: "party to proto",
 			party: &Party{
-				Id:       partyId,
+				ID:       partyId,
 				LeaderId: playerIds[0],
-				Members:  []*PartyMember{{PlayerId: playerIds[0], Username: playerUsernames[0]}, {PlayerId: playerIds[1], Username: playerUsernames[1]}},
+				Members:  []*PartyMember{{PlayerID: playerIds[0], Username: playerUsernames[0]}, {PlayerID: playerIds[1], Username: playerUsernames[1]}},
 			},
 			want: &pbmodel.Party{
 				Id:       partyId.Hex(),
@@ -56,10 +56,10 @@ func TestParty_ContainsMember(t *testing.T) {
 			party: &Party{
 				Members: []*PartyMember{
 					{
-						PlayerId: playerId,
+						PlayerID: playerId,
 					},
 					{
-						PlayerId: uuid.New(),
+						PlayerID: uuid.New(),
 					},
 				},
 			},
@@ -71,10 +71,10 @@ func TestParty_ContainsMember(t *testing.T) {
 			party: &Party{
 				Members: []*PartyMember{
 					{
-						PlayerId: uuid.New(),
+						PlayerID: uuid.New(),
 					},
 					{
-						PlayerId: playerId,
+						PlayerID: playerId,
 					},
 				},
 			},
@@ -111,13 +111,13 @@ func TestPartyInvite_ToProto(t *testing.T) {
 		{
 			name: "party invite to proto",
 			invite: &PartyInvite{
-				Id:      inviteId,
-				PartyId: partyId,
+				ID:      inviteId,
+				PartyID: partyId,
 
-				InviterId:       inviterId,
+				InviterID:       inviterId,
 				InviterUsername: inviterUsername,
 
-				TargetId:       targetId,
+				TargetID:       targetId,
 				TargetUsername: targetUsername,
 				ExpiresAt:      expiresAt,
 			},
@@ -151,7 +151,7 @@ func TestPartySettings_ToProto(t *testing.T) {
 		{
 			name: "party settings to proto",
 			settings: &PartySettings{
-				PlayerId: playerId,
+				PlayerID: playerId,
 
 				DequeueOnDisconnect: false,
 				AllowMemberDequeue:  false,

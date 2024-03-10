@@ -1,9 +1,9 @@
-package service
+package grpc
 
 import (
 	"context"
 	"fmt"
-	"github.com/emortalmc/proto-specs/gen/go/grpc/party"
+	pb "github.com/emortalmc/proto-specs/gen/go/grpc/party"
 	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"github.com/zakshearman/go-grpc-health/pkg/health"
 	"go.uber.org/zap"
@@ -12,14 +12,15 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
 	"net"
+	"party-manager/internal/app/event"
+	"party-manager/internal/app/party"
 	"party-manager/internal/config"
-	"party-manager/internal/kafka"
 	"party-manager/internal/repository"
 	"sync"
 )
 
 func RunServices(ctx context.Context, logger *zap.SugaredLogger, wg *sync.WaitGroup, cfg *config.Config,
-	repo repository.Repository, notif kafka.Notifier) {
+	repo *repository.MongoRepository, partySvc *party.Service, eventSvc *event.Service) {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Port))
 	if err != nil {
@@ -40,11 +41,13 @@ func RunServices(ctx context.Context, logger *zap.SugaredLogger, wg *sync.WaitGr
 		reflection.Register(s)
 	}
 
-	partySvc := newPartyService(notif, repo)
-	partySettingsSvc := newPartySettingsService(repo)
+	grpcPartySvc := newPartyService(repo, partySvc)
+	grpcPartySettingsSvc := newPartySettingsService(repo)
+	grpcEventSvc := newEventService(eventSvc, repo)
 
-	party.RegisterPartyServiceServer(s, partySvc)
-	party.RegisterPartySettingsServiceServer(s, partySettingsSvc)
+	pb.RegisterPartyServiceServer(s, grpcPartySvc)
+	pb.RegisterPartySettingsServiceServer(s, grpcPartySettingsSvc)
+	pb.RegisterEventServiceServer(s, grpcEventSvc)
 
 	// Create health probe
 	healthSvc := health.NewHealthService()

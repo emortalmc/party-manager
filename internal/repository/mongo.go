@@ -25,16 +25,18 @@ const (
 	partyCollectionName         = "party"
 	partyInviteCollectionName   = "partyInvite"
 	partySettingsCollectionName = "partySettings"
+	eventCollectionName         = "event"
 )
 
 var (
 	ErrAlreadyInParty = errors.New("player already in party")
 	ErrNotInParty     = errors.New("player not in party")
 	ErrIdMustBeNil    = errors.New("id must be nil")
+	ErrIdIsNil        = errors.New("id must not be nil")
 	ErrAlreadyLeader  = errors.New("player already leader") // TODO this isn't handled yet
 )
 
-type mongoRepository struct {
+type MongoRepository struct {
 	logger *zap.SugaredLogger
 
 	database *mongo.Database
@@ -42,16 +44,17 @@ type mongoRepository struct {
 	partyCollection         *mongo.Collection
 	partyInviteCollection   *mongo.Collection
 	partySettingsCollection *mongo.Collection
+	eventCollection         *mongo.Collection
 }
 
-func NewMongoRepository(ctx context.Context, logger *zap.SugaredLogger, wg *sync.WaitGroup, cfg *config.MongoDBConfig) (Repository, error) {
+func NewMongoRepository(ctx context.Context, logger *zap.SugaredLogger, wg *sync.WaitGroup, cfg *config.MongoDBConfig) (*MongoRepository, error) {
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.URI).SetRegistry(createCodecRegistry()))
 	if err != nil {
 		return nil, err
 	}
 
 	database := client.Database(databaseName)
-	repo := &mongoRepository{
+	repo := &MongoRepository{
 		logger: logger,
 
 		database: database,
@@ -59,6 +62,7 @@ func NewMongoRepository(ctx context.Context, logger *zap.SugaredLogger, wg *sync
 		partyCollection:         database.Collection(partyCollectionName),
 		partyInviteCollection:   database.Collection(partyInviteCollectionName),
 		partySettingsCollection: database.Collection(partySettingsCollectionName),
+		eventCollection:         database.Collection(eventCollectionName),
 	}
 
 	wg.Add(1)
@@ -104,7 +108,7 @@ var (
 	}
 )
 
-func (m *mongoRepository) createIndexes(ctx context.Context) {
+func (m *MongoRepository) createIndexes(ctx context.Context) {
 	collIndexes := map[*mongo.Collection][]mongo.IndexModel{
 		m.partyCollection:       partyIndexes,
 		m.partyInviteCollection: partyInviteIndexes,
@@ -126,7 +130,7 @@ func (m *mongoRepository) createIndexes(ctx context.Context) {
 	wg.Wait()
 }
 
-func (m *mongoRepository) createCollIndexes(ctx context.Context, coll *mongo.Collection, indexes []mongo.IndexModel) (int, error) {
+func (m *MongoRepository) createCollIndexes(ctx context.Context, coll *mongo.Collection, indexes []mongo.IndexModel) (int, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -138,7 +142,7 @@ func (m *mongoRepository) createCollIndexes(ctx context.Context, coll *mongo.Col
 	return len(result), nil
 }
 
-func (m *mongoRepository) HealthCheck(ctx context.Context) health.HealthStatus {
+func (m *MongoRepository) HealthCheck(ctx context.Context) health.HealthStatus {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -150,7 +154,7 @@ func (m *mongoRepository) HealthCheck(ctx context.Context) health.HealthStatus {
 	return health.HealthStatusHealthy
 }
 
-func (m *mongoRepository) IsInParty(ctx context.Context, playerId uuid.UUID) (bool, error) {
+func (m *MongoRepository) IsInParty(ctx context.Context, playerId uuid.UUID) (bool, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -162,14 +166,14 @@ func (m *mongoRepository) IsInParty(ctx context.Context, playerId uuid.UUID) (bo
 	return count > 0, nil
 }
 
-func (m *mongoRepository) CreateParty(ctx context.Context, party *model.Party) error {
+func (m *MongoRepository) CreateParty(ctx context.Context, party *model.Party) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	if party.Id != primitive.NilObjectID {
+	if party.ID != primitive.NilObjectID {
 		return ErrIdMustBeNil
 	}
-	party.Id = primitive.NewObjectID()
+	party.ID = primitive.NewObjectID()
 
 	_, err := m.partyCollection.InsertOne(ctx, party)
 	if err != nil {
@@ -179,7 +183,7 @@ func (m *mongoRepository) CreateParty(ctx context.Context, party *model.Party) e
 	return nil
 }
 
-func (m *mongoRepository) SetPartyMembers(ctx context.Context, partyId primitive.ObjectID, members []*model.PartyMember) error {
+func (m *MongoRepository) SetPartyMembers(ctx context.Context, partyId primitive.ObjectID, members []*model.PartyMember) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -187,7 +191,7 @@ func (m *mongoRepository) SetPartyMembers(ctx context.Context, partyId primitive
 	return err
 }
 
-func (m *mongoRepository) DeleteParty(ctx context.Context, partyId primitive.ObjectID) error {
+func (m *MongoRepository) DeleteParty(ctx context.Context, partyId primitive.ObjectID) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -195,7 +199,7 @@ func (m *mongoRepository) DeleteParty(ctx context.Context, partyId primitive.Obj
 	return err
 }
 
-func (m *mongoRepository) AddPartyMember(ctx context.Context, partyId primitive.ObjectID, member *model.PartyMember) error {
+func (m *MongoRepository) AddPartyMember(ctx context.Context, partyId primitive.ObjectID, member *model.PartyMember) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -215,7 +219,7 @@ func (m *mongoRepository) AddPartyMember(ctx context.Context, partyId primitive.
 	return nil
 }
 
-func (m *mongoRepository) SetPartyLeader(ctx context.Context, partyId primitive.ObjectID, leaderId uuid.UUID) error {
+func (m *MongoRepository) SetPartyLeader(ctx context.Context, partyId primitive.ObjectID, leaderId uuid.UUID) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -235,7 +239,7 @@ func (m *mongoRepository) SetPartyLeader(ctx context.Context, partyId primitive.
 	return nil
 }
 
-func (m *mongoRepository) SetPartyOpen(ctx context.Context, partyId primitive.ObjectID, open bool) error {
+func (m *MongoRepository) SetPartyOpen(ctx context.Context, partyId primitive.ObjectID, open bool) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -251,7 +255,23 @@ func (m *mongoRepository) SetPartyOpen(ctx context.Context, partyId primitive.Ob
 	return nil
 }
 
-func (m *mongoRepository) GetPartyById(ctx context.Context, partyId primitive.ObjectID) (*model.Party, error) {
+func (m *MongoRepository) SetPartyEventID(ctx context.Context, partyId primitive.ObjectID, eventId string) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	res, err := m.partyCollection.UpdateByID(ctx, partyId, bson.M{"$set": bson.M{"eventId": eventId}})
+	if err != nil {
+		return err
+	}
+
+	if res.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+
+	return nil
+}
+
+func (m *MongoRepository) GetPartyByID(ctx context.Context, partyId primitive.ObjectID) (*model.Party, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -264,7 +284,7 @@ func (m *mongoRepository) GetPartyById(ctx context.Context, partyId primitive.Ob
 	return &party, nil
 }
 
-func (m *mongoRepository) GetPartyByMemberId(ctx context.Context, playerId uuid.UUID) (*model.Party, error) {
+func (m *MongoRepository) GetPartyByMemberID(ctx context.Context, playerId uuid.UUID) (*model.Party, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -277,7 +297,7 @@ func (m *mongoRepository) GetPartyByMemberId(ctx context.Context, playerId uuid.
 	return &party, nil
 }
 
-func (m *mongoRepository) GetPartyIdByMemberId(ctx context.Context, playerId uuid.UUID) (primitive.ObjectID, error) {
+func (m *MongoRepository) GetPartyIdByMemberId(ctx context.Context, playerId uuid.UUID) (primitive.ObjectID, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -293,7 +313,7 @@ func (m *mongoRepository) GetPartyIdByMemberId(ctx context.Context, playerId uui
 	return result.Id, nil
 }
 
-func (m *mongoRepository) GetPartyLeaderIdByMemberId(ctx context.Context, playerId uuid.UUID) (uuid.UUID, error) {
+func (m *MongoRepository) GetPartyLeaderIdByMemberId(ctx context.Context, playerId uuid.UUID) (uuid.UUID, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -309,7 +329,7 @@ func (m *mongoRepository) GetPartyLeaderIdByMemberId(ctx context.Context, player
 	return result.LeaderId, nil
 }
 
-func (m *mongoRepository) GetPartyLeaderByPartyId(ctx context.Context, partyId primitive.ObjectID) (uuid.UUID, error) {
+func (m *MongoRepository) GetPartyLeaderByPartyId(ctx context.Context, partyId primitive.ObjectID) (uuid.UUID, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -325,7 +345,7 @@ func (m *mongoRepository) GetPartyLeaderByPartyId(ctx context.Context, partyId p
 	return result.LeaderId, nil
 }
 
-func (m *mongoRepository) RemoveMemberFromParty(ctx context.Context, partyId primitive.ObjectID, playerId uuid.UUID) error {
+func (m *MongoRepository) RemoveMemberFromParty(ctx context.Context, partyId primitive.ObjectID, playerId uuid.UUID) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -345,7 +365,7 @@ func (m *mongoRepository) RemoveMemberFromParty(ctx context.Context, partyId pri
 	return nil
 }
 
-func (m *mongoRepository) RemoveMemberFromSelfParty(ctx context.Context, playerId uuid.UUID) error {
+func (m *MongoRepository) RemoveMemberFromSelfParty(ctx context.Context, playerId uuid.UUID) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -361,14 +381,14 @@ func (m *mongoRepository) RemoveMemberFromSelfParty(ctx context.Context, playerI
 	return nil
 }
 
-func (m *mongoRepository) CreatePartyInvite(ctx context.Context, invite *model.PartyInvite) error {
+func (m *MongoRepository) CreatePartyInvite(ctx context.Context, invite *model.PartyInvite) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	if invite.Id != primitive.NilObjectID {
+	if invite.ID != primitive.NilObjectID {
 		return ErrIdMustBeNil
 	}
-	invite.Id = primitive.NewObjectID()
+	invite.ID = primitive.NewObjectID()
 
 	_, err := m.partyInviteCollection.InsertOne(ctx, invite)
 	if err != nil {
@@ -378,7 +398,7 @@ func (m *mongoRepository) CreatePartyInvite(ctx context.Context, invite *model.P
 	return nil
 }
 
-func (m *mongoRepository) DeletePartyInvite(ctx context.Context, partyId primitive.ObjectID, targetId uuid.UUID) error {
+func (m *MongoRepository) DeletePartyInvite(ctx context.Context, partyId primitive.ObjectID, targetId uuid.UUID) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -394,7 +414,7 @@ func (m *mongoRepository) DeletePartyInvite(ctx context.Context, partyId primiti
 	return nil
 }
 
-func (m *mongoRepository) DeletePartyInvitesByPartyId(ctx context.Context, partyId primitive.ObjectID) error {
+func (m *MongoRepository) DeletePartyInvitesByPartyId(ctx context.Context, partyId primitive.ObjectID) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -402,7 +422,7 @@ func (m *mongoRepository) DeletePartyInvitesByPartyId(ctx context.Context, party
 	return err
 }
 
-func (m *mongoRepository) GetPartyInvitesByPartyId(ctx context.Context, partyId primitive.ObjectID) ([]*model.PartyInvite, error) {
+func (m *MongoRepository) GetPartyInvitesByPartyId(ctx context.Context, partyId primitive.ObjectID) ([]*model.PartyInvite, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -420,7 +440,7 @@ func (m *mongoRepository) GetPartyInvitesByPartyId(ctx context.Context, partyId 
 	return invites, nil
 }
 
-func (m *mongoRepository) DoesPartyInviteExist(ctx context.Context, partyId primitive.ObjectID, playerId uuid.UUID) (bool, error) {
+func (m *MongoRepository) DoesPartyInviteExist(ctx context.Context, partyId primitive.ObjectID, playerId uuid.UUID) (bool, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -432,7 +452,7 @@ func (m *mongoRepository) DoesPartyInviteExist(ctx context.Context, partyId prim
 	return count > 0, nil
 }
 
-func (m *mongoRepository) GetPartySettings(ctx context.Context, playerId uuid.UUID) (*model.PartySettings, error) {
+func (m *MongoRepository) GetPartySettings(ctx context.Context, playerId uuid.UUID) (*model.PartySettings, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -445,17 +465,142 @@ func (m *mongoRepository) GetPartySettings(ctx context.Context, playerId uuid.UU
 	return &settings, nil
 }
 
-func (m *mongoRepository) UpdatePartySettings(ctx context.Context, settings *model.PartySettings) error {
+func (m *MongoRepository) UpdatePartySettings(ctx context.Context, settings *model.PartySettings) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	_, err := m.partySettingsCollection.ReplaceOne(ctx, bson.M{"_id": settings.PlayerId}, settings, options.Replace().SetUpsert(true))
+	_, err := m.partySettingsCollection.ReplaceOne(ctx, bson.M{"_id": settings.PlayerID}, settings, options.Replace().SetUpsert(true))
 	if err != nil {
 		return err
 	}
 
 	// NOTE: We don't care if the document was modified or not, because the settings are the same
 	return nil
+}
+
+func (m *MongoRepository) CreateEvent(ctx context.Context, event *model.Event) error {
+	if event.ID == "" {
+		return ErrIdIsNil
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	_, err := m.eventCollection.InsertOne(ctx, event)
+	if err != nil {
+		return fmt.Errorf("failed to create event: %w", err)
+	}
+
+	return nil
+}
+
+var ErrNoUpdateParams = errors.New("no update parameters")
+
+func (m *MongoRepository) UpdateEvent(ctx context.Context, eventId string, displayTime *time.Time, startTime *time.Time) (*model.Event, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	update := bson.M{}
+	if displayTime != nil {
+		update["displayTime"] = displayTime
+	}
+	if startTime != nil {
+		update["startTime"] = startTime
+	}
+
+	if len(update) == 0 {
+		return nil, ErrNoUpdateParams
+	}
+
+	res := m.eventCollection.FindOneAndUpdate(ctx, bson.M{"_id": eventId}, bson.M{"$set": update})
+	if res.Err() != nil {
+		return nil, fmt.Errorf("failed to update event: %w", res.Err())
+	}
+
+	var event model.Event
+	if err := res.Decode(&event); err != nil {
+		return nil, fmt.Errorf("failed to decode updated event: %w", err)
+	}
+
+	return &event, nil
+}
+
+func (m *MongoRepository) DeleteEvent(ctx context.Context, eventId string) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	_, err := m.eventCollection.DeleteOne(ctx, bson.M{"_id": eventId})
+	if err != nil {
+		return fmt.Errorf("failed to delete event: %w", err)
+	}
+
+	return nil
+}
+
+func (m *MongoRepository) ListEvents(ctx context.Context) ([]*model.Event, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	cursor, err := m.eventCollection.Find(ctx, bson.M{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list events: %w", err)
+	}
+
+	var events []*model.Event
+	err = cursor.All(ctx, &events)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract listed events: %w", err)
+	}
+
+	return events, nil
+}
+
+func (m *MongoRepository) SetEventPartyID(ctx context.Context, eventId string, partyId primitive.ObjectID) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	_, err := m.eventCollection.UpdateByID(ctx, eventId, bson.M{"$set": bson.M{"partyId": partyId}})
+	if err != nil {
+		return fmt.Errorf("failed to set event party id: %w", err)
+	}
+
+	return nil
+}
+
+func (m *MongoRepository) GetEventToDisplay(ctx context.Context) (*model.Event, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	filter := bson.M{"$and": []bson.M{{"displayTime": bson.M{"$gt": time.Now()}}, {"displayed": bson.M{"$exists": false}}}}
+	res := m.eventCollection.FindOneAndUpdate(ctx, filter, bson.M{"$set": bson.M{"displayed": true}})
+	if res.Err() != nil {
+		return nil, fmt.Errorf("failed to get event to display: %w", res.Err())
+	}
+
+	var event model.Event
+	if err := res.Decode(&event); err != nil {
+		return nil, fmt.Errorf("failed to decode event to display: %w", err)
+	}
+
+	return &event, nil
+}
+
+func (m *MongoRepository) GetEventToStart(ctx context.Context) (*model.Event, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	filter := bson.M{"$and": []bson.M{{"startTime": bson.M{"$gt": time.Now()}}, {"started": bson.M{"$exists": false}}}}
+	res := m.eventCollection.FindOneAndUpdate(ctx, filter, bson.M{"$set": bson.M{"started": true}})
+	if res.Err() != nil {
+		return nil, fmt.Errorf("failed to get event to start: %w", res.Err())
+	}
+
+	var event model.Event
+	if err := res.Decode(&event); err != nil {
+		return nil, fmt.Errorf("failed to decode event to start: %w", err)
+	}
+
+	return &event, nil
 }
 
 func createCodecRegistry() *bsoncodec.Registry {

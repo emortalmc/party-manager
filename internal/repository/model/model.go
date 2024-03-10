@@ -1,6 +1,7 @@
 package model
 
 import (
+	"github.com/emortalmc/proto-specs/gen/go/model/common"
 	pb "github.com/emortalmc/proto-specs/gen/go/model/party"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -9,7 +10,9 @@ import (
 )
 
 type Party struct {
-	Id primitive.ObjectID `bson:"_id"`
+	ID primitive.ObjectID `bson:"_id"`
+
+	EventID string `bson:"eventId,omitempty"`
 
 	LeaderId uuid.UUID      `bson:"leaderId"`
 	Members  []*PartyMember `bson:"members"`
@@ -20,7 +23,7 @@ type Party struct {
 func NewParty(leaderId uuid.UUID, leaderUsername string) *Party {
 	return &Party{
 		LeaderId: leaderId,
-		Members:  []*PartyMember{{PlayerId: leaderId, Username: leaderUsername}},
+		Members:  []*PartyMember{{PlayerID: leaderId, Username: leaderUsername}},
 
 		Open: false,
 	}
@@ -33,7 +36,7 @@ func (p *Party) ToProto() *pb.Party {
 	}
 
 	return &pb.Party{
-		Id:       p.Id.Hex(),
+		Id:       p.ID.Hex(),
 		LeaderId: p.LeaderId.String(),
 		Members:  memberProtos,
 		Open:     p.Open,
@@ -42,7 +45,7 @@ func (p *Party) ToProto() *pb.Party {
 
 func (p *Party) ContainsMember(id uuid.UUID) bool {
 	for _, member := range p.Members {
-		if member.PlayerId == id {
+		if member.PlayerID == id {
 			return true
 		}
 	}
@@ -52,7 +55,7 @@ func (p *Party) ContainsMember(id uuid.UUID) bool {
 
 func (p *Party) GetMember(id uuid.UUID) (member *PartyMember, ok bool) {
 	for _, loopMember := range p.Members {
-		if loopMember.PlayerId == id {
+		if loopMember.PlayerID == id {
 			member = loopMember
 			ok = true
 			return
@@ -62,26 +65,30 @@ func (p *Party) GetMember(id uuid.UUID) (member *PartyMember, ok bool) {
 	return
 }
 
+func (p *Party) IsEventParty() bool {
+	return p.EventID != ""
+}
+
 type PartyMember struct {
-	PlayerId uuid.UUID `bson:"playerId"`
+	PlayerID uuid.UUID `bson:"playerId"`
 	Username string    `bson:"username"`
 }
 
 func (m *PartyMember) ToProto() *pb.PartyMember {
 	return &pb.PartyMember{
-		Id:       m.PlayerId.String(),
+		Id:       m.PlayerID.String(),
 		Username: m.Username,
 	}
 }
 
 type PartyInvite struct {
-	Id      primitive.ObjectID `bson:"_id"`
-	PartyId primitive.ObjectID `bson:"partyId"`
+	ID      primitive.ObjectID `bson:"_id"`
+	PartyID primitive.ObjectID `bson:"partyId"`
 
-	InviterId       uuid.UUID `bson:"inviterId"`
+	InviterID       uuid.UUID `bson:"inviterId"`
 	InviterUsername string    `bson:"inviterUsername"`
 
-	TargetId       uuid.UUID `bson:"targetId"`
+	TargetID       uuid.UUID `bson:"targetId"`
 	TargetUsername string    `bson:"targetUsername"`
 
 	// ExpiresAt is the time at which the invite expires.
@@ -91,12 +98,12 @@ type PartyInvite struct {
 
 func (i *PartyInvite) ToProto() *pb.PartyInvite {
 	return &pb.PartyInvite{
-		PartyId: i.PartyId.Hex(),
+		PartyId: i.PartyID.Hex(),
 
-		TargetId:       i.TargetId.String(),
+		TargetId:       i.TargetID.String(),
 		TargetUsername: i.TargetUsername,
 
-		SenderId:       i.InviterId.String(),
+		SenderId:       i.InviterID.String(),
 		SenderUsername: i.InviterUsername,
 
 		ExpiresAt: timestamppb.New(i.ExpiresAt),
@@ -104,20 +111,20 @@ func (i *PartyInvite) ToProto() *pb.PartyInvite {
 }
 
 type PartySettings struct {
-	PlayerId uuid.UUID `bson:"_id"`
+	PlayerID uuid.UUID `bson:"_id"`
 
 	DequeueOnDisconnect bool `bson:"dequeueOnDisconnect"`
 	AllowMemberDequeue  bool `bson:"allowMemberDequeue"`
 	AllowMemberInvite   bool `bson:"allowMemberInvite"`
 
-	// InDb is whether the settings originated from the database or not.
+	// InDB is whether the settings originated from the database or not.
 	// If false, the default is probably returned.
-	InDb bool `bson:"-"`
+	InDB bool `bson:"-"`
 }
 
 func NewPartySettings(playerId uuid.UUID) *PartySettings {
 	return &PartySettings{
-		PlayerId: playerId,
+		PlayerID: playerId,
 
 		DequeueOnDisconnect: false,
 		AllowMemberDequeue:  false,
@@ -130,5 +137,53 @@ func (s *PartySettings) ToProto() *pb.PartySettings {
 		DequeueOnDisconnect: s.DequeueOnDisconnect,
 		AllowMemberDequeue:  s.AllowMemberDequeue,
 		AllowMemberInvite:   s.AllowMemberInvite,
+	}
+}
+
+type PlayerSkin struct {
+	Texture   string `bson:"texture"`
+	Signature string `bson:"signature"`
+}
+
+type Event struct {
+	ID string `bson:"_id"`
+
+	OwnerID       uuid.UUID  `bson:"ownerId"`
+	OwnerUsername string     `bson:"ownerUsername"`
+	Skin          PlayerSkin `bson:"skin"`
+
+	DisplayTime *time.Time `bson:"displayTime"`
+	StartTime   *time.Time `bson:"startTime"`
+
+	// PartyID only present if the event has started.
+	PartyID primitive.ObjectID `bson:"partyId,omitempty"`
+}
+
+func (e *Event) ToProto() *pb.EventData {
+	var displayTime, startTime *timestamppb.Timestamp
+	if e.DisplayTime != nil {
+		displayTime = timestamppb.New(*e.DisplayTime)
+	}
+	if e.StartTime != nil {
+		startTime = timestamppb.New(*e.StartTime)
+	}
+
+	return &pb.EventData{
+		Id:            e.ID,
+		OwnerId:       e.OwnerID.String(),
+		OwnerUsername: e.OwnerUsername,
+		OwnerSkin: &common.PlayerSkin{
+			Texture:   e.Skin.Texture,
+			Signature: e.Skin.Signature,
+		},
+		DisplayTime: displayTime,
+		StartTime:   startTime,
+	}
+}
+
+func (e *Event) ToLiveProto() *pb.LiveEvent {
+	return &pb.LiveEvent{
+		Data:    e.ToProto(),
+		PartyId: e.PartyID.Hex(),
 	}
 }

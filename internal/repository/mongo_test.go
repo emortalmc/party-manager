@@ -118,7 +118,7 @@ func TestMongoRepository_IsInParty(t *testing.T) {
 			name: "in_party",
 			dbModel: &model.Party{
 				LeaderId: playerId,
-				Members:  []*model.PartyMember{{PlayerId: playerId, Username: playerUsername}},
+				Members:  []*model.PartyMember{{PlayerID: playerId, Username: playerUsername}},
 			},
 
 			player: playerId,
@@ -130,7 +130,7 @@ func TestMongoRepository_IsInParty(t *testing.T) {
 			name: "not_in_party",
 			dbModel: &model.Party{
 				LeaderId: playerId,
-				Members:  []*model.PartyMember{{PlayerId: playerId, Username: playerUsername}},
+				Members:  []*model.PartyMember{{PlayerID: playerId, Username: playerUsername}},
 			},
 
 			player: uuid.New(),
@@ -170,7 +170,7 @@ func TestMongoRepository_CreateParty(t *testing.T) {
 			name: "success",
 			party: &model.Party{
 				LeaderId: playerId,
-				Members:  []*model.PartyMember{{PlayerId: playerId, Username: playerUsername}},
+				Members:  []*model.PartyMember{{PlayerID: playerId, Username: playerUsername}},
 			},
 
 			wantErr: nil,
@@ -178,9 +178,9 @@ func TestMongoRepository_CreateParty(t *testing.T) {
 		{
 			name: "failure_id_set",
 			party: &model.Party{
-				Id:       primitive.NewObjectID(),
+				ID:       primitive.NewObjectID(),
 				LeaderId: playerId,
-				Members:  []*model.PartyMember{{PlayerId: playerId, Username: playerUsername}},
+				Members:  []*model.PartyMember{{PlayerID: playerId, Username: playerUsername}},
 			},
 			wantErr: ErrIdMustBeNil,
 		},
@@ -191,14 +191,14 @@ func TestMongoRepository_CreateParty(t *testing.T) {
 			t.Cleanup(cleanup)
 			ctx := context.Background()
 
-			originalId := tt.party.Id
+			originalId := tt.party.ID
 
 			err := repo.CreateParty(ctx, tt.party)
 			assert.Equal(t, tt.wantErr, err)
 
 			// Check the ID has been set
 			if originalId == primitive.NilObjectID {
-				assert.NotEmpty(t, tt.party.Id)
+				assert.NotEmpty(t, tt.party.ID)
 			}
 
 			if tt.wantErr != nil {
@@ -208,7 +208,7 @@ func TestMongoRepository_CreateParty(t *testing.T) {
 			collection := database.Collection(partyCollectionName)
 			var party model.Party
 
-			err = collection.FindOne(ctx, bson.M{"_id": tt.party.Id}).Decode(&party)
+			err = collection.FindOne(ctx, bson.M{"_id": tt.party.ID}).Decode(&party)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.party, &party)
 		})
@@ -218,17 +218,17 @@ func TestMongoRepository_CreateParty(t *testing.T) {
 // todo
 //func TestMongoRepository_SetPartyMembers(t *testing.T) {
 //	party := &model.Party{
-//		Id:       primitive.NewObjectID(),
+//		ID:       primitive.NewObjectID(),
 //		LeaderId: uuid.New(),
-//		Members:  []*model.PartyMember{{PlayerId: uuid.New(), Username: "test"}},
+//		Members:  []*model.PartyMember{{PlayerID: uuid.New(), Username: "test"}},
 //	}
 //}
 
 func TestMongoRepository_DeleteParty(t *testing.T) {
 	party := &model.Party{
-		Id:       primitive.NewObjectID(),
+		ID:       primitive.NewObjectID(),
 		LeaderId: uuid.New(),
-		Members:  []*model.PartyMember{{PlayerId: uuid.New(), Username: "test"}},
+		Members:  []*model.PartyMember{{PlayerID: uuid.New(), Username: "test"}},
 	}
 
 	tests := []struct {
@@ -243,7 +243,7 @@ func TestMongoRepository_DeleteParty(t *testing.T) {
 		{
 			name:    "success",
 			dbParty: party,
-			partyId: party.Id,
+			partyId: party.ID,
 			wantErr: nil,
 		},
 		{
@@ -278,13 +278,13 @@ func TestMongoRepository_DeleteParty(t *testing.T) {
 
 func TestMongoRepository_AddPartyMember(t *testing.T) {
 	partyMembers := []model.PartyMember{
-		{PlayerId: uuid.New(), Username: "test1"},
-		{PlayerId: uuid.New(), Username: "test2"},
+		{PlayerID: uuid.New(), Username: "test1"},
+		{PlayerID: uuid.New(), Username: "test2"},
 	}
 
 	party := &model.Party{
-		Id:       primitive.NewObjectID(),
-		LeaderId: partyMembers[0].PlayerId,
+		ID:       primitive.NewObjectID(),
+		LeaderId: partyMembers[0].PlayerID,
 		Members:  []*model.PartyMember{&partyMembers[0]},
 	}
 
@@ -303,7 +303,7 @@ func TestMongoRepository_AddPartyMember(t *testing.T) {
 
 			dbParty: party,
 
-			partyId:     party.Id,
+			partyId:     party.ID,
 			addedMember: &partyMembers[1],
 
 			wantErr: nil,
@@ -323,7 +323,7 @@ func TestMongoRepository_AddPartyMember(t *testing.T) {
 
 			dbParty: party,
 
-			partyId:     party.Id,
+			partyId:     party.ID,
 			addedMember: &partyMembers[0],
 
 			wantErr: ErrAlreadyInParty,
@@ -355,13 +355,13 @@ func TestMongoRepository_AddPartyMember(t *testing.T) {
 
 func TestMongoRepository_SetPartyLeader(t *testing.T) {
 	partyMembers := []*model.PartyMember{
-		{PlayerId: uuid.New(), Username: "test1"},
-		{PlayerId: uuid.New(), Username: "test2"},
+		{PlayerID: uuid.New(), Username: "test1"},
+		{PlayerID: uuid.New(), Username: "test2"},
 	}
 
 	party := &model.Party{
-		Id:       primitive.NewObjectID(),
-		LeaderId: partyMembers[0].PlayerId,
+		ID:       primitive.NewObjectID(),
+		LeaderId: partyMembers[0].PlayerID,
 		Members:  partyMembers,
 	}
 
@@ -380,8 +380,8 @@ func TestMongoRepository_SetPartyLeader(t *testing.T) {
 
 			dbParty: party,
 
-			partyId:     party.Id,
-			setLeaderId: partyMembers[1].PlayerId,
+			partyId:     party.ID,
+			setLeaderId: partyMembers[1].PlayerID,
 
 			wantErr: nil,
 		},
@@ -391,7 +391,7 @@ func TestMongoRepository_SetPartyLeader(t *testing.T) {
 			dbParty: party,
 
 			partyId:     primitive.NewObjectID(),
-			setLeaderId: partyMembers[1].PlayerId,
+			setLeaderId: partyMembers[1].PlayerID,
 
 			wantErr: mongo.ErrNoDocuments,
 		},
@@ -400,8 +400,8 @@ func TestMongoRepository_SetPartyLeader(t *testing.T) {
 
 			dbParty: party,
 
-			partyId:     party.Id,
-			setLeaderId: partyMembers[0].PlayerId,
+			partyId:     party.ID,
+			setLeaderId: partyMembers[0].PlayerID,
 
 			wantErr: ErrAlreadyLeader,
 		},
@@ -431,11 +431,11 @@ func TestMongoRepository_SetPartyLeader(t *testing.T) {
 }
 
 func TestMongoRepository_GetPartyById(t *testing.T) {
-	member := &model.PartyMember{PlayerId: uuid.New(), Username: "test"}
+	member := &model.PartyMember{PlayerID: uuid.New(), Username: "test"}
 
 	party := &model.Party{
-		Id:       primitive.NewObjectID(),
-		LeaderId: member.PlayerId,
+		ID:       primitive.NewObjectID(),
+		LeaderId: member.PlayerID,
 		Members:  []*model.PartyMember{member},
 	}
 
@@ -452,7 +452,7 @@ func TestMongoRepository_GetPartyById(t *testing.T) {
 		{
 			name:    "success",
 			dbParty: party,
-			partyId: party.Id,
+			partyId: party.ID,
 
 			wantParty: party,
 		},
@@ -474,7 +474,7 @@ func TestMongoRepository_GetPartyById(t *testing.T) {
 			_, err := collection.InsertOne(ctx, tt.dbParty)
 			assert.NoError(t, err)
 
-			party, err := repo.GetPartyById(ctx, tt.partyId)
+			party, err := repo.GetPartyByID(ctx, tt.partyId)
 			assert.Equal(t, tt.wantErr, err)
 			assert.Equal(t, tt.wantParty, party)
 		})
@@ -482,11 +482,11 @@ func TestMongoRepository_GetPartyById(t *testing.T) {
 }
 
 func TestMongoRepository_GetPartyByMemberId(t *testing.T) {
-	member := &model.PartyMember{PlayerId: uuid.New(), Username: "test"}
+	member := &model.PartyMember{PlayerID: uuid.New(), Username: "test"}
 
 	party := &model.Party{
-		Id:       primitive.NewObjectID(),
-		LeaderId: member.PlayerId,
+		ID:       primitive.NewObjectID(),
+		LeaderId: member.PlayerID,
 		Members:  []*model.PartyMember{member},
 	}
 
@@ -503,7 +503,7 @@ func TestMongoRepository_GetPartyByMemberId(t *testing.T) {
 		{
 			name:     "success",
 			dbParty:  party,
-			memberId: member.PlayerId,
+			memberId: member.PlayerID,
 
 			wantParty: party,
 		},
@@ -525,7 +525,7 @@ func TestMongoRepository_GetPartyByMemberId(t *testing.T) {
 			_, err := collection.InsertOne(ctx, tt.dbParty)
 			assert.NoError(t, err)
 
-			party, err := repo.GetPartyByMemberId(ctx, tt.memberId)
+			party, err := repo.GetPartyByMemberID(ctx, tt.memberId)
 			assert.Equal(t, tt.wantErr, err)
 			assert.Equal(t, tt.wantParty, party)
 		})
@@ -533,11 +533,11 @@ func TestMongoRepository_GetPartyByMemberId(t *testing.T) {
 }
 
 func TestMongoRepository_GetPartyIdByMemberId(t *testing.T) {
-	member := &model.PartyMember{PlayerId: uuid.New(), Username: "test"}
+	member := &model.PartyMember{PlayerID: uuid.New(), Username: "test"}
 
 	party := &model.Party{
-		Id:       primitive.NewObjectID(),
-		LeaderId: member.PlayerId,
+		ID:       primitive.NewObjectID(),
+		LeaderId: member.PlayerID,
 		Members:  []*model.PartyMember{member},
 	}
 
@@ -554,9 +554,9 @@ func TestMongoRepository_GetPartyIdByMemberId(t *testing.T) {
 		{
 			name:     "success",
 			dbParty:  party,
-			memberId: member.PlayerId,
+			memberId: member.PlayerID,
 
-			wantPartyId: party.Id,
+			wantPartyId: party.ID,
 		},
 		{
 			name:     "failure_party_not_exists",
@@ -584,11 +584,11 @@ func TestMongoRepository_GetPartyIdByMemberId(t *testing.T) {
 }
 
 func TestMongoRepository_GetPartyLeaderIdByMemberId(t *testing.T) {
-	members := []*model.PartyMember{{PlayerId: uuid.New(), Username: "test1"}, {PlayerId: uuid.New(), Username: "test2"}}
+	members := []*model.PartyMember{{PlayerID: uuid.New(), Username: "test1"}, {PlayerID: uuid.New(), Username: "test2"}}
 
 	party := &model.Party{
-		Id:       primitive.NewObjectID(),
-		LeaderId: members[0].PlayerId,
+		ID:       primitive.NewObjectID(),
+		LeaderId: members[0].PlayerID,
 		Members:  members,
 	}
 
@@ -605,14 +605,14 @@ func TestMongoRepository_GetPartyLeaderIdByMemberId(t *testing.T) {
 		{
 			name:     "success",
 			dbParty:  party,
-			targetId: members[0].PlayerId,
+			targetId: members[0].PlayerID,
 
 			wantLeaderId: party.LeaderId,
 		},
 		{
 			name:     "success_not_leader",
 			dbParty:  party,
-			targetId: members[1].PlayerId,
+			targetId: members[1].PlayerID,
 
 			wantLeaderId: party.LeaderId,
 		},
@@ -642,10 +642,10 @@ func TestMongoRepository_GetPartyLeaderIdByMemberId(t *testing.T) {
 }
 
 func TestMongoRepository_RemoveMemberFromParty(t *testing.T) {
-	partyMembers := []*model.PartyMember{{PlayerId: uuid.New(), Username: "test1"}, {PlayerId: uuid.New(), Username: "test2"}}
+	partyMembers := []*model.PartyMember{{PlayerID: uuid.New(), Username: "test1"}, {PlayerID: uuid.New(), Username: "test2"}}
 	party := &model.Party{
-		Id:       primitive.NewObjectID(),
-		LeaderId: partyMembers[0].PlayerId,
+		ID:       primitive.NewObjectID(),
+		LeaderId: partyMembers[0].PlayerID,
 		Members:  partyMembers,
 	}
 
@@ -663,11 +663,11 @@ func TestMongoRepository_RemoveMemberFromParty(t *testing.T) {
 		{
 			name:     "success",
 			dbParty:  party,
-			partyId:  party.Id,
-			memberId: partyMembers[1].PlayerId,
+			partyId:  party.ID,
+			memberId: partyMembers[1].PlayerID,
 
 			wantParty: &model.Party{
-				Id:       party.Id,
+				ID:       party.ID,
 				LeaderId: party.LeaderId,
 				Members:  []*model.PartyMember{partyMembers[0]},
 			},
@@ -676,7 +676,7 @@ func TestMongoRepository_RemoveMemberFromParty(t *testing.T) {
 			name:     "failure_party_not_exists",
 			dbParty:  party,
 			partyId:  primitive.NewObjectID(),
-			memberId: partyMembers[1].PlayerId,
+			memberId: partyMembers[1].PlayerID,
 
 			wantParty: party,
 			wantErr:   mongo.ErrNoDocuments,
@@ -684,7 +684,7 @@ func TestMongoRepository_RemoveMemberFromParty(t *testing.T) {
 		{
 			name:     "failure_member_not_in_party",
 			dbParty:  party,
-			partyId:  party.Id,
+			partyId:  party.ID,
 			memberId: uuid.New(),
 
 			wantParty: party,
@@ -705,7 +705,7 @@ func TestMongoRepository_RemoveMemberFromParty(t *testing.T) {
 			assert.Equal(t, tt.wantErr, err)
 
 			var party *model.Party
-			err = collection.FindOne(ctx, bson.M{"_id": tt.dbParty.Id}).Decode(&party)
+			err = collection.FindOne(ctx, bson.M{"_id": tt.dbParty.ID}).Decode(&party)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.wantParty, party)
 		})
@@ -713,10 +713,10 @@ func TestMongoRepository_RemoveMemberFromParty(t *testing.T) {
 }
 
 func TestMongoRepository_RemoveMemberFromSelfParty(t *testing.T) {
-	members := []*model.PartyMember{{PlayerId: uuid.New(), Username: "test1"}, {PlayerId: uuid.New(), Username: "test2"}}
+	members := []*model.PartyMember{{PlayerID: uuid.New(), Username: "test1"}, {PlayerID: uuid.New(), Username: "test2"}}
 	party := &model.Party{
-		Id:       primitive.NewObjectID(),
-		LeaderId: members[0].PlayerId,
+		ID:       primitive.NewObjectID(),
+		LeaderId: members[0].PlayerID,
 		Members:  members,
 	}
 
@@ -733,10 +733,10 @@ func TestMongoRepository_RemoveMemberFromSelfParty(t *testing.T) {
 		{
 			name:     "success",
 			dbParty:  party,
-			memberId: members[1].PlayerId,
+			memberId: members[1].PlayerID,
 
 			wantParty: &model.Party{
-				Id:       party.Id,
+				ID:       party.ID,
 				LeaderId: party.LeaderId,
 				Members:  []*model.PartyMember{members[0]},
 			},
@@ -764,7 +764,7 @@ func TestMongoRepository_RemoveMemberFromSelfParty(t *testing.T) {
 			assert.Equal(t, tt.wantErr, err)
 
 			var party *model.Party
-			err = collection.FindOne(ctx, bson.M{"_id": tt.dbParty.Id}).Decode(&party)
+			err = collection.FindOne(ctx, bson.M{"_id": tt.dbParty.ID}).Decode(&party)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.wantParty, party)
 		})
@@ -773,10 +773,10 @@ func TestMongoRepository_RemoveMemberFromSelfParty(t *testing.T) {
 
 func TestMongoRepository_CreatePartyInvite(t *testing.T) {
 	invite := &model.PartyInvite{
-		InviterId:       uuid.New(),
+		InviterID:       uuid.New(),
 		InviterUsername: "test",
 
-		TargetId:       uuid.New(),
+		TargetID:       uuid.New(),
 		TargetUsername: "test2",
 
 		ExpiresAt: time.UnixMilli(time.Now().UnixMilli()).In(time.UTC),
@@ -794,7 +794,7 @@ func TestMongoRepository_CreatePartyInvite(t *testing.T) {
 		{
 			name: "failure_id_specified",
 			invite: &model.PartyInvite{
-				Id: primitive.NewObjectID(),
+				ID: primitive.NewObjectID(),
 			},
 			wantErr: ErrIdMustBeNil,
 		},
@@ -807,13 +807,13 @@ func TestMongoRepository_CreatePartyInvite(t *testing.T) {
 
 			err := repo.CreatePartyInvite(ctx, tt.invite)
 			assert.Equal(t, tt.wantErr, err)
-			assert.NotEqual(t, primitive.NilObjectID, tt.invite.Id)
+			assert.NotEqual(t, primitive.NilObjectID, tt.invite.ID)
 
 			if tt.wantErr == nil {
 				// Retrieve the invite from the database and compare it to the one we created
 				collection := database.Collection(partyInviteCollectionName)
 				var dbInvite *model.PartyInvite
-				err = collection.FindOne(ctx, bson.M{"_id": tt.invite.Id}).Decode(&dbInvite)
+				err = collection.FindOne(ctx, bson.M{"_id": tt.invite.ID}).Decode(&dbInvite)
 				assert.NoError(t, err)
 				assert.Equal(t, tt.invite, dbInvite)
 			}
@@ -823,10 +823,10 @@ func TestMongoRepository_CreatePartyInvite(t *testing.T) {
 
 func TestMongoRepository_DeletePartyInvite(t *testing.T) {
 	invite := &model.PartyInvite{
-		InviterId:       uuid.New(),
+		InviterID:       uuid.New(),
 		InviterUsername: "test",
 
-		TargetId:       uuid.New(),
+		TargetID:       uuid.New(),
 		TargetUsername: "test2",
 
 		ExpiresAt: time.UnixMilli(time.Now().UnixMilli()).In(time.UTC),
@@ -848,8 +848,8 @@ func TestMongoRepository_DeletePartyInvite(t *testing.T) {
 
 			dbInvite: invite,
 
-			partyId:  invite.PartyId,
-			targetId: invite.TargetId,
+			partyId:  invite.PartyID,
+			targetId: invite.TargetID,
 
 			wantPresent: false,
 		},
@@ -859,7 +859,7 @@ func TestMongoRepository_DeletePartyInvite(t *testing.T) {
 			dbInvite: invite,
 
 			partyId:  primitive.NewObjectID(),
-			targetId: invite.TargetId,
+			targetId: invite.TargetID,
 
 			wantErr:     mongo.ErrNoDocuments,
 			wantPresent: true,
@@ -869,7 +869,7 @@ func TestMongoRepository_DeletePartyInvite(t *testing.T) {
 
 			dbInvite: invite,
 
-			partyId:  invite.PartyId,
+			partyId:  invite.PartyID,
 			targetId: uuid.New(),
 
 			wantErr:     mongo.ErrNoDocuments,
@@ -889,7 +889,7 @@ func TestMongoRepository_DeletePartyInvite(t *testing.T) {
 			err = repo.DeletePartyInvite(ctx, tt.partyId, tt.targetId)
 			assert.Equal(t, tt.wantErr, err)
 
-			count, err := collection.CountDocuments(ctx, bson.M{"_id": tt.dbInvite.Id})
+			count, err := collection.CountDocuments(ctx, bson.M{"_id": tt.dbInvite.ID})
 			assert.NoError(t, err)
 			assert.Equal(t, tt.wantPresent, count > 0)
 		})
@@ -901,29 +901,29 @@ func TestMongoRepository_GetPartyInvitesByPartyId(t *testing.T) {
 
 	invites := []*model.PartyInvite{
 		{
-			Id:              primitive.NewObjectID(),
-			PartyId:         partyId,
-			InviterId:       uuid.New(),
+			ID:              primitive.NewObjectID(),
+			PartyID:         partyId,
+			InviterID:       uuid.New(),
 			InviterUsername: "test",
-			TargetId:        uuid.New(),
+			TargetID:        uuid.New(),
 			TargetUsername:  "test2",
 			ExpiresAt:       time.UnixMilli(time.Now().UnixMilli()).In(time.UTC),
 		},
 		{
-			Id:              primitive.NewObjectID(),
-			PartyId:         partyId,
-			InviterId:       uuid.New(),
+			ID:              primitive.NewObjectID(),
+			PartyID:         partyId,
+			InviterID:       uuid.New(),
 			InviterUsername: "test",
-			TargetId:        uuid.New(),
+			TargetID:        uuid.New(),
 			TargetUsername:  "test3",
 			ExpiresAt:       time.UnixMilli(time.Now().UnixMilli()).In(time.UTC),
 		},
 		{
-			Id:              primitive.NewObjectID(),
-			PartyId:         primitive.NewObjectID(),
-			InviterId:       uuid.New(),
+			ID:              primitive.NewObjectID(),
+			PartyID:         primitive.NewObjectID(),
+			InviterID:       uuid.New(),
 			InviterUsername: "otherPartyTest",
-			TargetId:        uuid.New(),
+			TargetID:        uuid.New(),
 			TargetUsername:  "otherPartyTest2",
 			ExpiresAt:       time.UnixMilli(time.Now().UnixMilli()).In(time.UTC),
 		},
@@ -975,20 +975,20 @@ func TestMongoRepository_GetPartyInvitesByPartyId(t *testing.T) {
 func TestMongoRepository_DoesPartyInviteExist(t *testing.T) {
 	invites := []*model.PartyInvite{
 		{
-			Id:              primitive.NewObjectID(),
-			PartyId:         primitive.NewObjectID(),
-			InviterId:       uuid.New(),
+			ID:              primitive.NewObjectID(),
+			PartyID:         primitive.NewObjectID(),
+			InviterID:       uuid.New(),
 			InviterUsername: "test",
-			TargetId:        uuid.New(),
+			TargetID:        uuid.New(),
 			TargetUsername:  "test2",
 			ExpiresAt:       time.UnixMilli(time.Now().UnixMilli()).In(time.UTC),
 		},
 		{
-			Id:              primitive.NewObjectID(),
-			PartyId:         primitive.NewObjectID(),
-			InviterId:       uuid.New(),
+			ID:              primitive.NewObjectID(),
+			PartyID:         primitive.NewObjectID(),
+			InviterID:       uuid.New(),
 			InviterUsername: "test3",
-			TargetId:        uuid.New(),
+			TargetID:        uuid.New(),
 			TargetUsername:  "test4",
 			ExpiresAt:       time.UnixMilli(time.Now().UnixMilli()).In(time.UTC),
 		},
@@ -1009,8 +1009,8 @@ func TestMongoRepository_DoesPartyInviteExist(t *testing.T) {
 
 			dbInvites: invites,
 
-			partyId:  invites[0].PartyId,
-			targetId: invites[0].TargetId,
+			partyId:  invites[0].PartyID,
+			targetId: invites[0].TargetID,
 
 			wantExists: true,
 		},
@@ -1020,7 +1020,7 @@ func TestMongoRepository_DoesPartyInviteExist(t *testing.T) {
 			dbInvites: invites,
 
 			partyId:  primitive.NewObjectID(),
-			targetId: invites[0].TargetId,
+			targetId: invites[0].TargetID,
 
 			wantExists: false,
 		},
@@ -1029,7 +1029,7 @@ func TestMongoRepository_DoesPartyInviteExist(t *testing.T) {
 
 			dbInvites: invites,
 
-			partyId:  invites[0].PartyId,
+			partyId:  invites[0].PartyID,
 			targetId: uuid.New(),
 
 			wantExists: false,
@@ -1071,7 +1071,7 @@ func TestMongoRepository_GetPartySettings(t *testing.T) {
 			name:       "success",
 			dbSettings: settings,
 
-			playerId: settings.PlayerId,
+			playerId: settings.PlayerID,
 
 			wantSettings: settings,
 		},
@@ -1157,13 +1157,13 @@ func TestMongoRepository_UpdatePartySettings(t *testing.T) {
 			}
 
 			if !tt.wantErr {
-				settings, err := repo.GetPartySettings(ctx, tt.updateSettings.PlayerId)
+				settings, err := repo.GetPartySettings(ctx, tt.updateSettings.PlayerID)
 				assert.NoError(t, err)
 				assert.Equal(t, tt.updateSettings, settings)
 
 				// If the player IDs are different, ensure both settings are in the database
-				if tt.updateSettings.PlayerId != tt.dbSettings.PlayerId {
-					settings, err := repo.GetPartySettings(ctx, tt.dbSettings.PlayerId)
+				if tt.updateSettings.PlayerID != tt.dbSettings.PlayerID {
+					settings, err := repo.GetPartySettings(ctx, tt.dbSettings.PlayerID)
 					assert.NoError(t, err)
 					assert.Equal(t, tt.dbSettings, settings)
 				}

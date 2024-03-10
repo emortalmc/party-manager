@@ -1,26 +1,27 @@
-package service
+package grpc
 
 import (
 	"context"
+	"errors"
 	pb "github.com/emortalmc/proto-specs/gen/go/grpc/party"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"party-manager/internal/repository"
+	"party-manager/internal/app/party"
 	"party-manager/internal/repository/model"
 )
 
 type partySettingsService struct {
 	pb.PartySettingsServiceServer
 
-	repo repository.Repository
+	r party.ReadWriter
 }
 
-func newPartySettingsService(repo repository.Repository) pb.PartySettingsServiceServer {
+func newPartySettingsService(r party.ReadWriter) pb.PartySettingsServiceServer {
 	return &partySettingsService{
-		repo: repo,
+		r: r,
 	}
 }
 
@@ -33,9 +34,9 @@ func (p *partySettingsService) GetPartySettings(ctx context.Context, request *pb
 			return nil, status.New(codes.InvalidArgument, "partyId is invalid").Err()
 		}
 
-		playerId, err = p.repo.GetPartyLeaderByPartyId(ctx, partyId)
+		playerId, err = p.r.GetPartyLeaderByPartyId(ctx, partyId)
 		if err != nil {
-			if err == mongo.ErrNoDocuments {
+			if errors.Is(err, mongo.ErrNoDocuments) {
 				return nil, status.New(codes.NotFound, "party does not exist").Err()
 			}
 			return nil, status.New(codes.Internal, "error getting party").Err()
@@ -50,9 +51,9 @@ func (p *partySettingsService) GetPartySettings(ctx context.Context, request *pb
 		return nil, status.New(codes.InvalidArgument, "partyId or playerId must be set").Err()
 	}
 
-	settings, err := p.repo.GetPartySettings(ctx, playerId)
+	settings, err := p.r.GetPartySettings(ctx, playerId)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
+		if errors.Is(err, mongo.ErrNoDocuments) {
 			return &pb.GetPartySettingsResponse{Settings: model.NewPartySettings(playerId).ToProto()}, nil
 		}
 		return nil, err
@@ -69,7 +70,7 @@ func (p *partySettingsService) UpdatePartySettings(ctx context.Context, request 
 		return nil, status.New(codes.InvalidArgument, "issuerId is invalid").Err()
 	}
 
-	settings, err := p.repo.GetPartySettings(ctx, playerId)
+	settings, err := p.r.GetPartySettings(ctx, playerId)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +87,7 @@ func (p *partySettingsService) UpdatePartySettings(ctx context.Context, request 
 		settings.AllowMemberInvite = *request.AllowMemberInvite
 	}
 
-	err = p.repo.UpdatePartySettings(ctx, settings)
+	err = p.r.UpdatePartySettings(ctx, settings)
 	if err != nil {
 		return nil, status.New(codes.Internal, "error updating party settings").Err()
 	}

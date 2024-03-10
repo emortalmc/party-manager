@@ -4,10 +4,13 @@ import (
 	"context"
 	"go.uber.org/zap"
 	"os/signal"
+	"party-manager/internal/app/event"
+	"party-manager/internal/app/party"
 	"party-manager/internal/config"
-	"party-manager/internal/kafka"
+	"party-manager/internal/grpc"
+	"party-manager/internal/kafka/consumer"
+	"party-manager/internal/kafka/writer"
 	"party-manager/internal/repository"
-	"party-manager/internal/service"
 	"sync"
 	"syscall"
 )
@@ -25,14 +28,18 @@ func Run(cfg *config.Config, logger *zap.SugaredLogger) {
 		logger.Fatalw("failed to connect to mongo", err)
 	}
 
-	notif := kafka.NewKafkaNotifier(delayedCtx, delayedWg, &cfg.Kafka, logger)
+	notif := writer.NewKafkaNotifier(delayedCtx, delayedWg, &cfg.Kafka, logger)
 	if err != nil {
 		logger.Fatalw("failed to create kafka notifier", err)
 	}
 
-	kafka.NewConsumer(ctx, wg, &cfg.Kafka, logger, notif, repo)
+	partySvc := party.NewService(logger, repo, notif)
+	eventSvc := event.NewService(repo)
+	event.NewScheduler(ctx, wg, logger, repo, notif, partySvc)
 
-	service.RunServices(ctx, logger, wg, cfg, repo, notif)
+	consumer.NewConsumer(ctx, wg, &cfg.Kafka, logger, partySvc)
+
+	grpc.RunServices(ctx, logger, wg, cfg, repo, partySvc, eventSvc)
 
 	wg.Wait()
 	logger.Info("stopped services")

@@ -1,4 +1,4 @@
-package service
+package grpc
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"party-manager/internal/kafka"
+	"party-manager/internal/kafka/writer"
 	"party-manager/internal/repository"
 	"party-manager/internal/repository/model"
 	"testing"
@@ -47,7 +47,7 @@ func TestPartyService_EmptyParty(t *testing.T) {
 			},
 
 			getPartyByIdReq: partyId,
-			getPartyByIdRes: &model.Party{Id: partyId, LeaderId: memberId, Members: []*model.PartyMember{{PlayerId: memberId, Username: "test"}}},
+			getPartyByIdRes: &model.Party{ID: partyId, LeaderId: memberId, Members: []*model.PartyMember{{PlayerID: memberId, Username: "test"}}},
 
 			deletePartyReq: partyId,
 
@@ -60,7 +60,7 @@ func TestPartyService_EmptyParty(t *testing.T) {
 			},
 
 			getPartyByMemberIdReq: memberId,
-			getPartyByMemberIdRes: &model.Party{Id: partyId, LeaderId: memberId, Members: []*model.PartyMember{{PlayerId: memberId, Username: "test"}}},
+			getPartyByMemberIdRes: &model.Party{ID: partyId, LeaderId: memberId, Members: []*model.PartyMember{{PlayerID: memberId, Username: "test"}}},
 
 			deletePartyReq: partyId,
 
@@ -72,7 +72,7 @@ func TestPartyService_EmptyParty(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 
-			// Create mock repo
+			// Create mock r
 			mockCntrl := gomock.NewController(t)
 			defer mockCntrl.Finish()
 
@@ -102,7 +102,7 @@ func TestPartyService_EmptyParty(t *testing.T) {
 				repo.EXPECT().DeletePartyInvitesByPartyId(ctx, tt.deletePartyReq).Return(tt.deletePartyInvitesByPartyIdErr)
 			}
 
-			notif := kafka.NewMockNotifier(mockCntrl)
+			notif := writer.NewMockNotifier(mockCntrl)
 			// If there are no errors yet, expect a notification
 			if tt.deletePartyErr == nil && tt.getPartyByIdErr == nil && tt.getPartyByMemberIdErr == nil {
 				var party *model.Party
@@ -151,9 +151,9 @@ func TestPartyService_GetParty(t *testing.T) {
 
 			getPartyByIdReq: partyId,
 			getPartyByIdRes: &model.Party{
-				Id:       partyId,
+				ID:       partyId,
 				LeaderId: memberId,
-				Members:  []*model.PartyMember{{PlayerId: memberId, Username: "t"}, {PlayerId: memberId2, Username: "t2"}},
+				Members:  []*model.PartyMember{{PlayerID: memberId, Username: "t"}, {PlayerID: memberId2, Username: "t2"}},
 			},
 
 			wantRes: &pb.GetPartyResponse{
@@ -172,9 +172,9 @@ func TestPartyService_GetParty(t *testing.T) {
 
 			getPartyByMemberIdReq: memberId,
 			getPartyByMemberIdRes: &model.Party{
-				Id:       partyId,
+				ID:       partyId,
 				LeaderId: memberId,
-				Members:  []*model.PartyMember{{PlayerId: memberId, Username: "t"}, {PlayerId: memberId2, Username: "t2"}},
+				Members:  []*model.PartyMember{{PlayerID: memberId, Username: "t"}, {PlayerID: memberId2, Username: "t2"}},
 			},
 
 			wantRes: &pb.GetPartyResponse{
@@ -213,7 +213,7 @@ func TestPartyService_GetParty(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 
-			// Create mock repo
+			// Create mock r
 			mockCntrl := gomock.NewController(t)
 			defer mockCntrl.Finish()
 
@@ -226,7 +226,7 @@ func TestPartyService_GetParty(t *testing.T) {
 				repo.EXPECT().GetPartyByMemberId(ctx, tt.getPartyByMemberIdReq).Return(tt.getPartyByMemberIdRes, tt.getPartyByMemberIdErr)
 			}
 
-			notif := kafka.NewMockNotifier(mockCntrl)
+			notif := writer.NewMockNotifier(mockCntrl)
 
 			s := newPartyService(notif, repo)
 
@@ -243,10 +243,10 @@ func TestPartyService_GetPartyInvites(t *testing.T) {
 	memberId2 := uuid.New()
 
 	validPartyInvite := &model.PartyInvite{
-		Id:              primitive.NewObjectID(),
-		InviterId:       memberId,
+		ID:              primitive.NewObjectID(),
+		InviterID:       memberId,
 		InviterUsername: "t",
-		TargetId:        memberId2,
+		TargetID:        memberId2,
 		TargetUsername:  "t2",
 		ExpiresAt:       time.Now().Add(time.Hour),
 	}
@@ -323,7 +323,7 @@ func TestPartyService_GetPartyInvites(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 
-			// Create mock repo
+			// Create mock r
 			mockCntrl := gomock.NewController(t)
 			defer mockCntrl.Finish()
 
@@ -336,7 +336,7 @@ func TestPartyService_GetPartyInvites(t *testing.T) {
 				repo.EXPECT().GetPartyInvitesByPartyId(ctx, tt.getPartyInvitesByPartyIdReq).Return(tt.getPartyInvitesByPartyIdRes, tt.getPartyInvitesByPartyIdErr)
 			}
 
-			notif := kafka.NewMockNotifier(mockCntrl)
+			notif := writer.NewMockNotifier(mockCntrl)
 
 			s := newPartyService(notif, repo)
 
@@ -387,15 +387,15 @@ func TestPartyService_GetPartyInvites(t *testing.T) {
 //				IssuerId:       playerIds[0].String(),
 //				IssuerUsername: playerUsernames[0],
 //
-//				TargetId:       playerIds[0].String(),
+//				TargetID:       playerIds[0].String(),
 //				TargetUsername: playerUsernames[0],
 //			},
 //
 //			getPartyByMemberIdReq: playerIds[0],
 //			getPartyByMemberIdRes: &model.Party{
-//				PlayerId:       partyId,
+//				PlayerID:       partyId,
 //				LeaderId: playerIds[0],
-//				Members:  []*model.PartyMember{{PlayerId: playerIds[0], Username: playerUsernames[0]}},
+//				Members:  []*model.PartyMember{{PlayerID: playerIds[0], Username: playerUsernames[0]}},
 //			},
 //
 //			getPartyIdOfTargetReq: playerIds[1],
@@ -406,7 +406,7 @@ func TestPartyService_GetPartyInvites(t *testing.T) {
 //			doesPartyInviteExistRes:         false,
 //
 //			createPartyInviteReq: &model.PartyInvite{
-//				PartyId:  partyId,
+//				PartyID:  partyId,
 //			}
 //		},
 //		// Player 0 is inviting player 1 to the party. Player 2 is the leader and the party has all invites enabled.
@@ -416,15 +416,15 @@ func TestPartyService_GetPartyInvites(t *testing.T) {
 //				IssuerId:       playerIds[0].String(),
 //				IssuerUsername: playerUsernames[0],
 //
-//				TargetId:       playerIds[1].String(),
+//				TargetID:       playerIds[1].String(),
 //				TargetUsername: playerUsernames[1],
 //			},
 //
 //			getPartyByMemberIdReq: playerIds[0],
 //			getPartyByMemberIdRes: &model.Party{
-//				PlayerId:       partyId,
+//				PlayerID:       partyId,
 //				LeaderId: playerIds[2],
-//				Members:  []*model.PartyMember{{PlayerId: playerIds[0], Username: playerUsernames[0]}, {PlayerId: playerIds[2], Username: playerUsernames[2]}},
+//				Members:  []*model.PartyMember{{PlayerID: playerIds[0], Username: playerUsernames[0]}, {PlayerID: playerIds[2], Username: playerUsernames[2]}},
 //			},
 //
 //			getPartySettingsReq: partyId,
