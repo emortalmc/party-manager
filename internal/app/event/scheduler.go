@@ -101,6 +101,7 @@ func (h *handler) runStartEvent(ctx context.Context) {
 		}
 	} else {
 		p = model.NewParty(e.OwnerID, e.OwnerUsername)
+		p.Open = true
 		if err := h.repo.CreateParty(ctx, p); err != nil {
 			h.log.Errorf("failed to create party: %v", err)
 			return
