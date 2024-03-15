@@ -275,7 +275,7 @@ func (s *partyService) LeaveParty(ctx context.Context, request *pb.LeavePartyReq
 		return nil, invalidFieldErr("player_id")
 	}
 
-	if _, err := s.svc.RemovePlayerFromParty(ctx, playerId); err != nil {
+	if _, err := s.svc.RemovePlayerFromParty(ctx, playerId, true); err != nil {
 		if errors.Is(err, partySvc.ErrPlayerIsOnlyMember) {
 			return nil, leaveIsOnlyMember
 		}

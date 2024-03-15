@@ -89,7 +89,7 @@ func (h *handler) runStartEvent(ctx context.Context) {
 			}
 		} else {
 			// note: p gets reassigned to the player's new party
-			if p, err = h.partySvc.RemovePlayerFromParty(ctx, e.OwnerID); err != nil {
+			if p, err = h.partySvc.RemovePlayerFromParty(ctx, e.OwnerID, true); err != nil {
 				h.log.Errorf("failed to remove player from party: %v", err)
 				return
 			}

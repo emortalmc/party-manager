@@ -179,7 +179,7 @@ func (s *Service) JoinPartyByMemberID(ctx context.Context, playerID uuid.UUID, p
 
 		s.notif.PartyDeleted(ctx, currentParty)
 	} else { // RemovePlayerFromParty handles leader election if they are the leader of the party
-		if _, err := s.RemovePlayerFromParty(ctx, playerID); err != nil {
+		if _, err := s.RemovePlayerFromParty(ctx, playerID, false); err != nil {
 			return nil, fmt.Errorf("failed to remove player from party: %w", err)
 		}
 	}
@@ -200,7 +200,7 @@ func (s *Service) JoinPartyByMemberID(ctx context.Context, playerID uuid.UUID, p
 
 var ErrPlayerIsOnlyMember = errors.New("player is the only member of the party")
 
-func (s *Service) RemovePlayerFromParty(ctx context.Context, playerID uuid.UUID) (*model.Party, error) {
+func (s *Service) RemovePlayerFromParty(ctx context.Context, playerID uuid.UUID, createNewParty bool) (*model.Party, error) {
 	party, err := s.repo.GetPartyByMemberID(ctx, playerID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get party by member id: %w", err)
@@ -234,8 +234,10 @@ func (s *Service) RemovePlayerFromParty(ctx context.Context, playerID uuid.UUID)
 		s.notif.PartyLeaderChanged(ctx, party.ID, newLeader)
 	}
 
-	if party, err = s.putPlayerInNewParty(ctx, playerID, member.Username); err != nil {
-		return nil, fmt.Errorf("failed to put player in new party: %w", err)
+	if createNewParty {
+		if party, err = s.putPlayerInNewParty(ctx, playerID, member.Username); err != nil {
+			return nil, fmt.Errorf("failed to put player in new party: %w", err)
+		}
 	}
 
 	return party, nil
@@ -261,7 +263,7 @@ func (s *Service) KickPlayerFromParty(ctx context.Context, executorID uuid.UUID,
 
 	// All checks passed, remove the player from the party
 
-	if _, err := s.RemovePlayerFromParty(ctx, targetID); err != nil {
+	if _, err := s.RemovePlayerFromParty(ctx, targetID, true); err != nil {
 		return fmt.Errorf("failed to remove player from party: %w", err)
 	}
 
