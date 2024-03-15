@@ -70,6 +70,15 @@ func (s *Service) HandlePlayerDisconnect(ctx context.Context, playerID uuid.UUID
 }
 
 func (s *Service) HandlePlayerConnect(ctx context.Context, playerId uuid.UUID, username string) {
+	if party, err := s.repo.GetPartyByMemberID(ctx, playerId); err == nil {
+		if party.IsEventParty() && party.LeaderId == playerId {
+			return
+		}
+
+		s.log.Errorw("player already in party??", "playerID", playerId, "party", party)
+		return
+	}
+
 	party := model.NewParty(playerId, username)
 
 	if err := s.repo.CreateParty(ctx, party); err != nil {
