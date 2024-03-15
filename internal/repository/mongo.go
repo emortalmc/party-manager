@@ -599,7 +599,7 @@ func (m *MongoRepository) GetEventToDisplay(ctx context.Context) (*model.Event, 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	filter := bson.M{"$and": []bson.M{{"displayTime": bson.M{"$gt": time.Now()}}, {"displayed": bson.M{"$exists": false}}}}
+	filter := bson.M{"$and": []bson.M{{"displayTime": bson.M{"$lte": time.Now()}}, {"displayed": bson.M{"$exists": false}}}}
 	res := m.eventCollection.FindOneAndUpdate(ctx, filter, bson.M{"$set": bson.M{"displayed": true}})
 	if res.Err() != nil {
 		return nil, fmt.Errorf("failed to get event to display: %w", res.Err())
@@ -617,7 +617,7 @@ func (m *MongoRepository) GetEventToStart(ctx context.Context) (*model.Event, er
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	filter := bson.M{"$and": []bson.M{{"startTime": bson.M{"$gt": time.Now()}}, {"started": bson.M{"$exists": false}}}}
+	filter := bson.M{"$and": []bson.M{{"startTime": bson.M{"$lte": time.Now()}}, {"started": bson.M{"$exists": false}}}}
 	res := m.eventCollection.FindOneAndUpdate(ctx, filter, bson.M{"$set": bson.M{"started": true}})
 	if res.Err() != nil {
 		return nil, fmt.Errorf("failed to get event to start: %w", res.Err())
