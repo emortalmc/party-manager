@@ -5,7 +5,6 @@ import (
 	"errors"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/zap"
-	"log"
 	"party-manager/internal/app/party"
 	"party-manager/internal/kafka/writer"
 	"party-manager/internal/repository"
@@ -51,10 +50,8 @@ func (h *handler) run(ctx context.Context, wg *sync.WaitGroup) {
 }
 
 func (h *handler) runDisplayEvent(ctx context.Context) {
-	log.Printf("running display event")
 	e, err := h.repo.GetEventToDisplay(ctx)
 	if err != nil {
-		log.Printf("failed to get event to display: %v", err)
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return
 		}
@@ -63,16 +60,12 @@ func (h *handler) runDisplayEvent(ctx context.Context) {
 		return
 	}
 
-	log.Printf("got event to display: %v", e)
-
 	h.notif.DisplayEvent(ctx, e)
 }
 
 func (h *handler) runStartEvent(ctx context.Context) {
-	log.Printf("running start event")
 	e, err := h.repo.GetEventToStart(ctx)
 	if err != nil {
-		log.Printf("failed to get event to start: %v", err)
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return
 		}
@@ -80,7 +73,6 @@ func (h *handler) runStartEvent(ctx context.Context) {
 		h.log.Errorf("failed to get event to start: %v", err)
 		return
 	}
-	log.Printf("got event to start: %v", e)
 
 	// We don't convert a party as it's too complex. Instead, we re-create it.
 	p, err := h.repo.GetPartyByMemberID(ctx, e.OwnerID)
@@ -129,6 +121,8 @@ func (h *handler) runStartEvent(ctx context.Context) {
 		h.log.Errorf("failed to set party event id: %v", err)
 		return
 	}
+
+	e.PartyID = &p.ID
 
 	h.notif.StartEvent(ctx, e)
 }
