@@ -179,7 +179,7 @@ func (s *Service) JoinPartyByMemberID(ctx context.Context, playerID uuid.UUID, p
 
 		s.notif.PartyDeleted(ctx, currentParty)
 	} else { // RemovePlayerFromParty handles leader election if they are the leader of the party
-		if _, err := s.RemovePlayerFromParty(ctx, targetID); err != nil {
+		if _, err := s.RemovePlayerFromParty(ctx, playerID); err != nil {
 			return nil, fmt.Errorf("failed to remove player from party: %w", err)
 		}
 	}
