@@ -208,12 +208,12 @@ func (s *Service) RemovePlayerFromParty(ctx context.Context, playerID uuid.UUID)
 		return nil, fmt.Errorf("failed to get party by member id: %w", err)
 	}
 
-	if err := s.repo.RemoveMemberFromParty(ctx, party.ID, playerID); err != nil {
-		return nil, fmt.Errorf("failed to remove party member: %w", err) // wrapped is of type ErrNotInParty
-	}
-
 	if len(party.Members) == 1 {
 		return party, ErrPlayerIsOnlyMember
+	}
+
+	if err := s.repo.RemoveMemberFromParty(ctx, party.ID, playerID); err != nil {
+		return nil, fmt.Errorf("failed to remove party member: %w", err) // wrapped is of type ErrNotInParty
 	}
 
 	member, ok := party.GetMember(playerID)
