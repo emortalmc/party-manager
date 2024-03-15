@@ -5,16 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"go.mongodb.org/mongo-driver/mongo"
+	"party-manager/internal/repository"
 	"party-manager/internal/repository/model"
 	"time"
 )
 
 type Service struct {
-	repo  ReadWriter
+	repo  *repository.MongoRepository
 	notif KafkaWriter
 }
 
-func NewService(repo ReadWriter, notif KafkaWriter) *Service {
+func NewService(repo *repository.MongoRepository, notif KafkaWriter) *Service {
 	return &Service{
 		repo:  repo,
 		notif: notif,
@@ -61,6 +62,13 @@ func (s *Service) DeleteEventByID(ctx context.Context, eventId string) error {
 func (s *Service) DeleteEvent(ctx context.Context, event *model.Event) error {
 	if err := s.repo.DeleteEvent(ctx, event.ID); err != nil {
 		return fmt.Errorf("failed to delete event: %w", err)
+	}
+
+	// remove the event_id from the party if it was live
+	if event.PartyID != nil {
+		if err := s.repo.RemovePartyEventID(ctx, *event.PartyID); err != nil {
+			return fmt.Errorf("failed to remove event_id from party: %w", err)
+		}
 	}
 
 	s.notif.DeleteEvent(ctx, event)

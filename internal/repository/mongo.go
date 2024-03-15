@@ -271,6 +271,22 @@ func (m *MongoRepository) SetPartyEventID(ctx context.Context, partyId primitive
 	return nil
 }
 
+func (m *MongoRepository) RemovePartyEventID(ctx context.Context, partyId primitive.ObjectID) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	res, err := m.partyCollection.UpdateByID(ctx, partyId, bson.M{"$unset": bson.M{"eventId": ""}})
+	if err != nil {
+		return err
+	}
+
+	if res.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+
+	return nil
+}
+
 func (m *MongoRepository) GetPartyByID(ctx context.Context, partyId primitive.ObjectID) (*model.Party, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()

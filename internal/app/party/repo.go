@@ -43,6 +43,7 @@ type Writer interface {
 	SetPartyOpen(ctx context.Context, partyId primitive.ObjectID, open bool) error
 
 	SetPartyEventID(ctx context.Context, partyId primitive.ObjectID, eventId string) error
+	RemovePartyEventID(ctx context.Context, partyId primitive.ObjectID) error
 
 	// RemoveMemberFromParty removes from party.
 	// Throws mongo.ErrNoDocuments if party does not exist.
