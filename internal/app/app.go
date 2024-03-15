@@ -23,12 +23,12 @@ func Run(cfg *config.Config, logger *zap.SugaredLogger) {
 	delayedWg := &sync.WaitGroup{}
 	delayedCtx, delayedCancel := context.WithCancel(ctx)
 
-	repo, err := repository.NewMongoRepository(delayedCtx, logger, delayedWg, &cfg.MongoDB)
+	repo, err := repository.NewMongoRepository(delayedCtx, logger, delayedWg, cfg.MongoDB)
 	if err != nil {
 		logger.Fatalw("failed to connect to mongo", err)
 	}
 
-	notif := writer.NewKafkaNotifier(delayedCtx, delayedWg, &cfg.Kafka, logger)
+	notif := writer.NewKafkaNotifier(delayedCtx, delayedWg, cfg.Kafka, logger)
 	if err != nil {
 		logger.Fatalw("failed to create kafka notifier", err)
 	}
@@ -37,7 +37,7 @@ func Run(cfg *config.Config, logger *zap.SugaredLogger) {
 	eventSvc := event.NewService(repo)
 	event.NewScheduler(ctx, wg, logger, repo, notif, partySvc)
 
-	consumer.NewConsumer(ctx, wg, &cfg.Kafka, logger, partySvc)
+	consumer.NewConsumer(ctx, wg, cfg.Kafka, logger, partySvc)
 
 	grpc.RunServices(ctx, logger, wg, cfg, repo, partySvc, eventSvc)
 

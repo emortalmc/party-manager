@@ -37,6 +37,11 @@ func (s *Service) UpdateEvent(ctx context.Context, eventId string, displayTime *
 	return s.repo.UpdateEvent(ctx, eventId, displayTime, startTime)
 }
 
+func (s *Service) DeleteCurrentEvent(ctx context.Context) error {
+	return s.repo.DeleteCurrentEvent(ctx)
+}
+
 func (s *Service) DeleteEvent(ctx context.Context, eventId string) error {
+	// todo process if it's a current event or not. If it is, we need to send out an end message
 	return s.repo.DeleteEvent(ctx, eventId)
 }

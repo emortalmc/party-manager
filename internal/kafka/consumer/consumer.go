@@ -24,7 +24,7 @@ type Consumer struct {
 	reader *kafka.Reader
 }
 
-func NewConsumer(ctx context.Context, wg *sync.WaitGroup, config *config.KafkaConfig, logger *zap.SugaredLogger, partySvc *party.Service) {
+func NewConsumer(ctx context.Context, wg *sync.WaitGroup, config config.KafkaConfig, logger *zap.SugaredLogger, partySvc *party.Service) {
 
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:     []string{fmt.Sprintf("%s:%d", config.Host, config.Port)},

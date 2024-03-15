@@ -22,7 +22,7 @@ type Notifier struct {
 	w      *kafka.Writer
 }
 
-func NewKafkaNotifier(ctx context.Context, wg *sync.WaitGroup, cfg *config.KafkaConfig, logger *zap.SugaredLogger) *Notifier {
+func NewKafkaNotifier(ctx context.Context, wg *sync.WaitGroup, cfg config.KafkaConfig, logger *zap.SugaredLogger) *Notifier {
 	w := &kafka.Writer{
 		Addr:         kafka.TCP(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)),
 		Topic:        writeTopic,
@@ -147,7 +147,7 @@ func (k *Notifier) DisplayEvent(ctx context.Context, event *model.Event) {
 }
 
 func (k *Notifier) StartEvent(ctx context.Context, event *model.Event) {
-	msg := &partymsg.EventStartMessage{Event: event.ToLiveProto()}
+	msg := &partymsg.EventStartMessage{Event: event.ToProto()}
 
 	if err := k.writeMessage(ctx, msg); err != nil {
 		k.logger.Errorw("failed to write message", "err", err)
@@ -156,12 +156,7 @@ func (k *Notifier) StartEvent(ctx context.Context, event *model.Event) {
 }
 
 func (k *Notifier) DeleteEvent(ctx context.Context, event *model.Event) {
-	var msg *partymsg.EventDeleteMessage
-	if event.PartyID.IsZero() {
-		msg = &partymsg.EventDeleteMessage{Event: &partymsg.EventDeleteMessage_UpcomingEvent{UpcomingEvent: event.ToProto()}}
-	} else {
-		msg = &partymsg.EventDeleteMessage{Event: &partymsg.EventDeleteMessage_LiveEvent{LiveEvent: event.ToLiveProto()}}
-	}
+	msg := &partymsg.EventDeleteMessage{Event: event.ToProto()}
 
 	if err := k.writeMessage(ctx, msg); err != nil {
 		k.logger.Errorw("failed to write message", "err", err)

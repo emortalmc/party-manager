@@ -47,7 +47,7 @@ type MongoRepository struct {
 	eventCollection         *mongo.Collection
 }
 
-func NewMongoRepository(ctx context.Context, logger *zap.SugaredLogger, wg *sync.WaitGroup, cfg *config.MongoDBConfig) (*MongoRepository, error) {
+func NewMongoRepository(ctx context.Context, logger *zap.SugaredLogger, wg *sync.WaitGroup, cfg config.MongoDBConfig) (*MongoRepository, error) {
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.URI).SetRegistry(createCodecRegistry()))
 	if err != nil {
 		return nil, err
@@ -529,9 +529,29 @@ func (m *MongoRepository) DeleteEvent(ctx context.Context, eventId string) error
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	_, err := m.eventCollection.DeleteOne(ctx, bson.M{"_id": eventId})
+	result, err := m.eventCollection.DeleteOne(ctx, bson.M{"_id": eventId})
 	if err != nil {
 		return fmt.Errorf("failed to delete event: %w", err)
+	}
+
+	if result.DeletedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+
+	return nil
+}
+
+func (m *MongoRepository) DeleteCurrentEvent(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	result, err := m.eventCollection.DeleteOne(ctx, bson.M{"started": true})
+	if err != nil {
+		return fmt.Errorf("failed to delete current event: %w", err)
+	}
+
+	if result.DeletedCount == 0 {
+		return mongo.ErrNoDocuments
 	}
 
 	return nil

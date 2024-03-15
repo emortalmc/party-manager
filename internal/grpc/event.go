@@ -25,7 +25,8 @@ type eventService struct {
 
 func newEventService(svc *event.Service, reader event.Reader) pb.EventServiceServer {
 	return &eventService{
-		r: reader,
+		svc: svc,
+		r:   reader,
 	}
 }
 
@@ -99,10 +100,28 @@ func (e *eventService) UpdateEvent(ctx context.Context, req *pb.UpdateEventReque
 	}, nil
 }
 
+var errNoCurrentEvent = panicIfErr(status.New(codes.NotFound, "no current event").
+	WithDetails(&pb.DeleteEventErrorResponse{ErrorType: pb.DeleteEventErrorResponse_NO_CURRENT_EVENT})).Err()
+
+var errEventNotFound = panicIfErr(status.New(codes.NotFound, "event not found").
+	WithDetails(&pb.DeleteEventErrorResponse{ErrorType: pb.DeleteEventErrorResponse_NOT_FOUND})).Err()
+
 func (e *eventService) DeleteEvent(ctx context.Context, in *pb.DeleteEventRequest) (*pb.DeleteEventResponse, error) {
+	if in.EventId == nil {
+		if err := e.svc.DeleteCurrentEvent(ctx); err != nil {
+			if errors.Is(err, mongo.ErrNoDocuments) {
+				return nil, errNoCurrentEvent
+			}
+
+			return nil, fmt.Errorf("failed to delete current event: %w", err)
+		}
+
+		return &pb.DeleteEventResponse{}, nil
+	}
+
 	if err := e.svc.DeleteEvent(ctx, in.GetEventId()); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, status.Error(codes.NotFound, "event not found")
+			return nil, errEventNotFound
 		}
 
 		return nil, fmt.Errorf("failed to delete event: %w", err)

@@ -6,7 +6,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/zap"
 	"party-manager/internal/app/party"
+	"party-manager/internal/kafka/writer"
 	"party-manager/internal/repository"
+	"party-manager/internal/repository/model"
 	"sync"
 	"time"
 )
@@ -14,11 +16,11 @@ import (
 type handler struct {
 	log      *zap.SugaredLogger
 	repo     *repository.MongoRepository // this is a horrible cross cutting concern but we'll cope for now
-	notif    KafkaWriter
+	notif    *writer.Notifier
 	partySvc *party.Service
 }
 
-func NewScheduler(ctx context.Context, wg *sync.WaitGroup, log *zap.SugaredLogger, repo *repository.MongoRepository, notif KafkaWriter,
+func NewScheduler(ctx context.Context, wg *sync.WaitGroup, log *zap.SugaredLogger, repo *repository.MongoRepository, notif *writer.Notifier,
 	partySvc *party.Service) {
 	h := &handler{
 		log:      log,
@@ -97,10 +99,16 @@ func (h *handler) runStartEvent(ctx context.Context) {
 				return
 			}
 		}
+	} else {
+		p = model.NewParty(e.OwnerID, e.OwnerUsername)
+		if err := h.repo.CreateParty(ctx, p); err != nil {
+			h.log.Errorf("failed to create party: %v", err)
+			return
+		}
+
+		// todo what is the impact of notifying this? could it be bad?
+		h.notif.PartyCreated(ctx, p)
 	}
-	//else { // todo create a party as they are not online
-	//
-	//}
 
 	// We now have a party that is open with only the owner of the event in it.
 

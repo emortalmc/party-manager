@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	"party-manager/internal/utils"
 	"time"
 )
 
@@ -156,7 +157,7 @@ type Event struct {
 	StartTime   *time.Time `bson:"startTime"`
 
 	// PartyID only present if the event has started.
-	PartyID primitive.ObjectID `bson:"partyId,omitempty"`
+	PartyID *primitive.ObjectID `bson:"partyId,omitempty"`
 }
 
 func (e *Event) ToProto() *pb.EventData {
@@ -166,6 +167,11 @@ func (e *Event) ToProto() *pb.EventData {
 	}
 	if e.StartTime != nil {
 		startTime = timestamppb.New(*e.StartTime)
+	}
+
+	var partyId *string
+	if e.PartyID != nil {
+		partyId = utils.PointerOf(e.PartyID.Hex())
 	}
 
 	return &pb.EventData{
@@ -178,12 +184,6 @@ func (e *Event) ToProto() *pb.EventData {
 		},
 		DisplayTime: displayTime,
 		StartTime:   startTime,
-	}
-}
-
-func (e *Event) ToLiveProto() *pb.LiveEvent {
-	return &pb.LiveEvent{
-		Data:    e.ToProto(),
-		PartyId: e.PartyID.Hex(),
+		PartyId:     partyId,
 	}
 }
