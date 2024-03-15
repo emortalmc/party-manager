@@ -10,12 +10,14 @@ import (
 )
 
 type Service struct {
-	repo ReadWriter
+	repo  ReadWriter
+	notif KafkaWriter
 }
 
-func NewService(repo ReadWriter) *Service {
+func NewService(repo ReadWriter, notif KafkaWriter) *Service {
 	return &Service{
-		repo: repo,
+		repo:  repo,
+		notif: notif,
 	}
 }
 
@@ -38,10 +40,30 @@ func (s *Service) UpdateEvent(ctx context.Context, eventId string, displayTime *
 }
 
 func (s *Service) DeleteCurrentEvent(ctx context.Context) error {
-	return s.repo.DeleteCurrentEvent(ctx)
+	e, err := s.repo.GetLiveEvent(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to delete current event: %w", err)
+	}
+
+	return s.DeleteEvent(ctx, e)
 }
 
-func (s *Service) DeleteEvent(ctx context.Context, eventId string) error {
-	// todo process if it's a current event or not. If it is, we need to send out an end message
-	return s.repo.DeleteEvent(ctx, eventId)
+func (s *Service) DeleteEventByID(ctx context.Context, eventId string) error {
+	e, err := s.repo.GetEventByID(ctx, eventId)
+	if err != nil {
+		return fmt.Errorf("failed to get event: %w", err)
+
+	}
+
+	return s.DeleteEvent(ctx, e)
+}
+
+func (s *Service) DeleteEvent(ctx context.Context, event *model.Event) error {
+	if err := s.repo.DeleteEvent(ctx, event.ID); err != nil {
+		return fmt.Errorf("failed to delete event: %w", err)
+	}
+
+	s.notif.DeleteEvent(ctx, event)
+
+	return nil
 }

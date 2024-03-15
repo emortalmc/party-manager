@@ -541,20 +541,28 @@ func (m *MongoRepository) DeleteEvent(ctx context.Context, eventId string) error
 	return nil
 }
 
-func (m *MongoRepository) DeleteCurrentEvent(ctx context.Context) error {
+func (m *MongoRepository) GetEventByID(ctx context.Context, eventId string) (*model.Event, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	result, err := m.eventCollection.DeleteOne(ctx, bson.M{"started": true})
-	if err != nil {
-		return fmt.Errorf("failed to delete current event: %w", err)
+	var event model.Event
+	if err := m.eventCollection.FindOne(ctx, bson.M{"_id": eventId}).Decode(&event); err != nil {
+		return nil, fmt.Errorf("failed to get event by id: %w", err)
 	}
 
-	if result.DeletedCount == 0 {
-		return mongo.ErrNoDocuments
+	return &event, nil
+}
+
+func (m *MongoRepository) GetLiveEvent(ctx context.Context) (*model.Event, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var event model.Event
+	if err := m.eventCollection.FindOne(ctx, bson.M{"started": true}).Decode(&event); err != nil {
+		return nil, fmt.Errorf("failed to get live event: %w", err)
 	}
 
-	return nil
+	return &event, nil
 }
 
 func (m *MongoRepository) ListEvents(ctx context.Context) ([]*model.Event, error) {

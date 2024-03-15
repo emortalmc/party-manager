@@ -119,7 +119,7 @@ func (e *eventService) DeleteEvent(ctx context.Context, in *pb.DeleteEventReques
 		return &pb.DeleteEventResponse{}, nil
 	}
 
-	if err := e.svc.DeleteEvent(ctx, in.GetEventId()); err != nil {
+	if err := e.svc.DeleteEventByID(ctx, in.GetEventId()); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, errEventNotFound
 		}

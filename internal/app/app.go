@@ -34,7 +34,7 @@ func Run(cfg *config.Config, logger *zap.SugaredLogger) {
 	}
 
 	partySvc := party.NewService(logger, repo, notif)
-	eventSvc := event.NewService(repo)
+	eventSvc := event.NewService(repo, notif)
 	event.NewScheduler(ctx, wg, logger, repo, notif, partySvc)
 
 	consumer.NewConsumer(ctx, wg, cfg.Kafka, logger, partySvc)
