@@ -8,7 +8,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/zap"
-	"log"
 	"party-manager/internal/repository/model"
 	"time"
 )
@@ -164,7 +163,6 @@ func (s *Service) JoinPartyByMemberID(ctx context.Context, playerID uuid.UUID, p
 	}
 
 	if !targetParty.Open {
-		log.Printf("checking party ID %v and player ID %v", targetParty.ID, playerID)
 		if err := s.repo.DeletePartyInvite(ctx, targetParty.ID, playerID); err != nil {
 			if errors.Is(err, mongo.ErrNoDocuments) {
 				return nil, ErrNotInvited
